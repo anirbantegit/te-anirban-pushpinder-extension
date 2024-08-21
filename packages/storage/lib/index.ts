@@ -1,4 +1,14 @@
 import { createStorage, StorageType, type BaseStorage, SessionAccessLevel } from './base';
 import { exampleThemeStorage } from './exampleThemeStorage';
+import { videoBlacklistStorage } from './blacklistStorage';
+import { userAuthStorage } from './authStorage';
 
-export { exampleThemeStorage, createStorage, StorageType, SessionAccessLevel, BaseStorage };
+export {
+  videoBlacklistStorage,
+  userAuthStorage,
+  exampleThemeStorage,
+  createStorage,
+  StorageType,
+  SessionAccessLevel,
+  BaseStorage,
+};

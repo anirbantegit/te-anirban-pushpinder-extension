@@ -1,9 +1,9 @@
-.detected-video {
+.detected-video.blocked {
     position: relative;
     border: 2px solid #ff0000;
 }
 
-.detected-video::before {
+.detected-video.blocked::before {
     content: '';
     position: absolute;
     top: 0;

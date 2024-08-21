@@ -1,7 +1,7 @@
 import { ThemeProvider } from '@mui/material/styles';
 import { NextUIProvider } from '@nextui-org/react';
 import { theme } from '@src/styles/theme';
-import { Register } from '@src/pages/Register';
+import { Dashboard } from '@src/pages/Dashboard';
 import { PopupLayout } from '@src/components/layout/PopupLayout';
 
 import '@src/styles/Popup.css';
@@ -11,7 +11,7 @@ const Popup = () => {
     <ThemeProvider theme={theme}>
       <NextUIProvider>
         <PopupLayout>
-          <Register />
+          <Dashboard />
         </PopupLayout>
       </NextUIProvider>
     </ThemeProvider>
