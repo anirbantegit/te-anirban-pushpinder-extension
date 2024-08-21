@@ -8,9 +8,9 @@ export type VideoData = {
 type ChangeCallback = (video: VideoData, url: string) => void;
 
 export class YouTubeChangeDetector {
-  private observer: MutationObserver;
-  private currentUrl: string;
-  private callback: ChangeCallback;
+  private observer!: MutationObserver;
+  private currentUrl!: string;
+  private callback!: ChangeCallback;
 
   constructor(callback: ChangeCallback) {
     if (!window.location.hostname.includes('youtube.com')) {
@@ -109,7 +109,7 @@ export class YouTubeChangeDetector {
     const videoIdRegex = /\/watch\?v=([a-zA-Z0-9_-]{11})/;
 
     return Array.from(videoRenderers).map((renderer) => {
-      const anchor = renderer.querySelector(anchorSelector);
+      const anchor = renderer.querySelector(anchorSelector) as HTMLAnchorElement | null;
       const href = anchor?.href ?? '';
       const videoIdMatch = href.match(videoIdRegex);
 
