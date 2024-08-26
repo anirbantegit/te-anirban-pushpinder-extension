@@ -1,7 +1,12 @@
 export type VideoData = {
   videoId: string;
   title: string;
+  thumbnail: string;
+  channel: string;
+  channelId: string;
+  views: string;
   referenceDom: HTMLElement;
+  videoType: string;
   type: 'homepage' | 'sidebar' | 'search';
 };
 
@@ -11,6 +16,7 @@ export class YouTubeChangeDetector2 {
   private observer!: MutationObserver;
   private currentUrl!: string;
   private callback!: ChangeCallback;
+  private previousVideoIds: Set<string> = new Set();
 
   constructor(callback: ChangeCallback) {
     if (!window.location.hostname.includes('youtube.com')) {
@@ -48,9 +54,13 @@ export class YouTubeChangeDetector2 {
    * Handles DOM mutations and URL changes, fetching videos based on the current situation (homepage, sidebar, search).
    */
   private onMutation() {
-    this.resetDetectedVideos(); // Reset detected videos before querying new ones
+    this.resetDetectedVideos();
     const newVideos = this.queryVideosBasedOnUrl();
-    this.callback(newVideos, this.currentUrl);
+    const newVideoIds = new Set(newVideos.map(video => video.videoId));
+    if (!this.areSetsEqual(this.previousVideoIds, newVideoIds)) {
+      this.previousVideoIds = newVideoIds;
+      this.callback(newVideos, this.currentUrl);
+    }
   }
 
   /**
@@ -65,9 +75,12 @@ export class YouTubeChangeDetector2 {
    * Delays the mutation handler slightly after URL changes to ensure DOM updates are captured.
    */
   private onUrlChange() {
-    setTimeout(() => {
-      this.onMutation(); // Handle any changes after URL change
-    }, 100); // Small delay to ensure DOM updates
+    // debounce(this.onMutation(), 2000);
+    const newVideos = this.queryVideosBasedOnUrl();
+    const newVideoIds = new Set(newVideos.map(video => video.videoId));
+    if (!this.areSetsEqual(this.previousVideoIds, newVideoIds)) {
+      this.onMutation();
+    }
   }
 
   /**
@@ -90,6 +103,10 @@ export class YouTubeChangeDetector2 {
   private querySidebarVideos(): VideoData[] {
     return this.queryVideos(
       'ytd-compact-video-renderer',
+      'ytd-channel-name',
+      'yt-image',
+      'ytd-playlist-video-thumbnail-renderer',
+      'div#metadata-line',
       'a.yt-simple-endpoint.style-scope.ytd-compact-video-renderer',
       'sidebar',
     );
@@ -99,43 +116,84 @@ export class YouTubeChangeDetector2 {
    * Queries and fetches videos from the YouTube homepage.
    */
   private queryHomepageVideos(): VideoData[] {
-    return this.queryVideos('ytd-rich-item-renderer', 'a#video-title-link', 'homepage');
+    return this.queryVideos(
+      'ytd-rich-item-renderer',
+      'ytd-channel-name',
+      'ytd-playlist-video-thumbnail-renderer',
+      'yt-image',
+      'div#metadata-line',
+      'a#video-title-link',
+      'homepage',
+    );
   }
 
   /**
    * Queries and fetches videos from YouTube search results.
    */
   private querySearchVideos(): VideoData[] {
-    return this.queryVideos('ytd-video-renderer', 'a#video-title', 'search');
+    return this.queryVideos(
+      'ytd-video-renderer',
+      'ytd-channel-name',
+      'ytd-playlist-video-thumbnail-renderer',
+      'yt-image',
+      'div#metadata-line',
+      'a#video-title',
+      'search',
+    );
   }
 
   /**
    * Generalized video query function that works for different YouTube sections.
    */
-  private queryVideos(containerSelector: string, anchorSelector: string, type: VideoData['type']): VideoData[] {
+  private queryVideos(
+    containerSelector: string,
+    channelSelector: string,
+    playlistSelector: string,
+    thumbNailSelector: string,
+    metadataSelector: string,
+    anchorSelector: string,
+    type: VideoData['type'],
+  ): VideoData[] {
     const videoRenderers = document.querySelectorAll(containerSelector);
     const videoIdRegex = /\/watch\?v=([a-zA-Z0-9_-]{11})/;
-
+    // return [{  videoId: "string",
+    //   title: "string",
+    //   thumbnail:"thumbnail",
+    //   referenceDom: document.querySelector('body') as HTMLAnchorElement,
+    //   type: 'homepage' }];
     return Array.from(videoRenderers)
       .map(renderer => {
         const anchor = renderer.querySelector(anchorSelector) as HTMLAnchorElement | null;
+        const anchorplaylist = renderer.querySelector(playlistSelector) as HTMLAnchorElement;
+        const anchorthumbnail = renderer.querySelector(thumbNailSelector) as HTMLAnchorElement;
+        const anchorchannel = renderer.querySelector(channelSelector) as HTMLAnchorElement;
+        const anchormetadata = renderer.querySelector(metadataSelector) as HTMLAnchorElement;
         const href = anchor?.href ?? '';
         const videoIdMatch = href.match(videoIdRegex);
+        // console.log('anchorplaylist',anchorplaylist)
 
         if (videoIdMatch) {
           const videoId = videoIdMatch[1];
           const title = this.extractTitle(anchor);
-
+          const thumbnail = this.extractThumbnail(anchorthumbnail);
+          const channel = this.extractChannelTitle(anchorchannel);
+          const channelId = this.extractChannelId(anchorchannel);
+          const views = this.extractViews(anchormetadata);
+          const videoType = this.extractPlaylist(anchorplaylist);
           const videoData: VideoData = {
             videoId,
             title,
+            thumbnail,
+            videoType,
+            channel,
+            channelId,
+            views,
             referenceDom: renderer as HTMLElement,
             type,
           };
 
           // Mark as detected after querying
           videoData.referenceDom.classList.add('detected-video');
-
           return videoData;
         }
         return null;
@@ -160,7 +218,55 @@ export class YouTubeChangeDetector2 {
 
     return title || ''; // Return an empty string if no title is found
   }
+  private extractThumbnail(anchor: Element | null): string {
+    if (!anchor) return '';
 
+    // Attempt to get the thumbnail image URL
+    const imgElement = anchor.querySelector('yt-image img');
+    const thumbnailUrl = imgElement?.getAttribute('src')?.trim();
+
+    return thumbnailUrl || ''; // Return an empty string if no thumbnail URL is found
+  }
+  private extractPlaylist(anchor: Element | null): string {
+    if (!anchor) return '';
+
+    // Attempt to get the thumbnail image URL
+    const imgElement = anchor.querySelector('yt-image img');
+    const playlistUrl = imgElement?.getAttribute('src')?.trim();
+    // console.log('playlistUrl',playlistUrl)
+    if (playlistUrl) {
+      return 'playlist';
+    } else {
+      return 'video';
+    }
+  }
+  private extractChannelTitle(anchor: Element | null): string {
+    if (!anchor) return '';
+
+    // Attempt to get the title from the yt-formatted-string element
+    const ytFormattedString = anchor.querySelector('yt-formatted-string');
+    const title = ytFormattedString?.getAttribute('title')?.trim();
+
+    return title || ''; // Return an empty string if no title is found
+  }
+  private extractChannelId(anchor: Element | null): string {
+    if (!anchor) return '';
+
+    // Attempt to get the title from the yt-formatted-string element
+    const ytFormattedString = anchor.querySelector('yt-formatted-string a');
+    const channelid = ytFormattedString?.getAttribute('href')?.trim();
+
+    return channelid || ''; // Return an empty string if no title is found
+  }
+  private extractViews(anchor: Element | null): string {
+    if (!anchor) return '';
+
+    // Attempt to get the views from the metadata line
+    const viewsElement = anchor.querySelector('span.inline-metadata-item');
+    const views = viewsElement?.textContent?.trim();
+
+    return views || ''; // Return an empty string if no views are found
+  }
   /**
    * Patches history methods to trigger events on pushState and replaceState.
    */
@@ -179,6 +285,13 @@ export class YouTubeChangeDetector2 {
       window.dispatchEvent(new Event('replaceState'));
       return result;
     };
+  }
+  private areSetsEqual(set1: Set<string>, set2: Set<string>): boolean {
+    if (set1.size !== set2.size) return false;
+    for (const item of set1) {
+      if (!set2.has(item)) return false;
+    }
+    return true;
   }
 
   /**

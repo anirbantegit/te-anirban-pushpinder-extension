@@ -6,7 +6,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 
 export const Dashboard = () => {
   const [videoId, setVideoId] = useState('');
-
+  const [contentFilter, setContentFilter] = useState('');
   const [blacklistedVideos, setBlacklistedVideos] = useState<string[]>(
     videoBlacklistStorage.getSnapshot()?.blacklistedVideoIds || [],
   );
@@ -37,6 +37,14 @@ export const Dashboard = () => {
   return (
     <PopupLayout>
       <div className="flex flex-col space-y-4">
+        <h1 className="text-xl font-bold">Allowed Content Filter</h1>
+        <TextField
+          label="Description"
+          value={contentFilter}
+          onChange={e => setContentFilter(e.target.value)}
+          variant="outlined"
+          fullWidth
+        />
         <h1 className="text-xl font-bold">Blacklisted Videos</h1>
         <TextField
           label="Video ID"
