@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react';
 import styled from '@emotion/styled';
 
 const Container = styled.div`
-    padding: 1rem;
+    padding: 4px 5px;
     background-color: #f0f0f0;
     min-height: 100%;
 `;
