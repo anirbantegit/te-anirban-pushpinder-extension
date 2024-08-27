@@ -57,6 +57,7 @@ export class YouTubeChangeDetector2 {
     this.resetDetectedVideos();
     const newVideos = this.queryVideosBasedOnUrl();
     const newVideoIds = new Set(newVideos.map(video => video.videoId));
+    // console.log('newVideoIds',this.previousVideoIds,newVideoIds)
     if (!this.areSetsEqual(this.previousVideoIds, newVideoIds)) {
       this.previousVideoIds = newVideoIds;
       this.callback(newVideos, this.currentUrl);
@@ -170,7 +171,7 @@ export class YouTubeChangeDetector2 {
         const anchormetadata = renderer.querySelector(metadataSelector) as HTMLAnchorElement;
         const href = anchor?.href ?? '';
         const videoIdMatch = href.match(videoIdRegex);
-        // console.log('anchorplaylist',anchorplaylist)
+        // console.log('anchorthumbnail',anchorplaylist,anchorthumbnail)
 
         if (videoIdMatch) {
           const videoId = videoIdMatch[1];
@@ -179,7 +180,7 @@ export class YouTubeChangeDetector2 {
           const channel = this.extractChannelTitle(anchorchannel);
           const channelId = this.extractChannelId(anchorchannel);
           const views = this.extractViews(anchormetadata);
-          const videoType = this.extractPlaylist(anchorplaylist);
+          const videoType = anchorplaylist === null ? 'video' : this.extractPlaylist(anchorplaylist);
           const videoData: VideoData = {
             videoId,
             title,

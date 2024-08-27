@@ -1,6 +1,8 @@
 .detected-video.blocked {
     position: relative;
     border: 2px solid #ff0000;
+    display: none !important;
+
 }
 
 .detected-video.blocked::before {
@@ -13,4 +15,5 @@
     background-color: rgba(255, 0, 0, 0.2);
     pointer-events: none;
     z-index: 1;
+    
 }
