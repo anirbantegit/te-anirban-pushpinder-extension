@@ -3,7 +3,7 @@ import { exampleThemeStorage } from './exampleThemeStorage';
 import { blockedVideosByTabStorage } from './blockedVideosByTabStorage';
 import { blacklistedVideosStorage } from './blacklistedVideosStorage';
 import { SessionAccessLevelEnum, StorageEnum } from './enums';
-import type { BaseStorage, BlockedVideoDetails } from './types';
+import type { BaseStorage, BlockedVideoDetails, VideoData } from './types';
 
 export {
   exampleThemeStorage,
@@ -13,4 +13,4 @@ export {
   StorageEnum,
   SessionAccessLevelEnum,
 };
-export type { BaseStorage, BlockedVideoDetails };
+export type { BaseStorage, BlockedVideoDetails, VideoData };

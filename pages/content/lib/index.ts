@@ -1,6 +1,5 @@
-import type { VideoData } from './YouTubeChangeDetector';
 import { YouTubeChangeDetector } from './YouTubeChangeDetector';
-import type { BlockedVideoDetails } from '@extension/storage/lib';
+import type { BlockedVideoDetails, VideoData } from '@extension/storage/lib';
 import { blacklistedVideosStorage, blockedVideosByTabStorage } from '@extension/storage/lib';
 
 let blacklistedVideoIds: string[] = [];
@@ -69,7 +68,7 @@ const updateDomClasses = (blacklistedVideos: VideoData[], nonBlacklistedVideos: 
 /**
  * Stores blocked videos in the storage by tab ID.
  */
-const storeBlockedVideos = async (tabId: number, detectedVideos: object[], blacklistedVideos: VideoData[]) => {
+const storeBlockedVideos = async (tabId: number, detectedVideos: VideoData[], blacklistedVideos: VideoData[]) => {
   const timestamp = new Date().toISOString();
 
   // Clear old entries if it exists

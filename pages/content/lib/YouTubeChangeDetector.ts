@@ -1,14 +1,4 @@
-export type VideoData = {
-  videoId: string;
-  title: string;
-  thumbnail: string;
-  channel: string;
-  channelId: string;
-  views: string;
-  referenceDom: HTMLElement;
-  videoType: string;
-  type: 'homepage' | 'sidebar' | 'search';
-};
+import type { VideoData } from '@extension/storage/dist/lib';
 
 type ChangeCallback = (videos: VideoData[], url: string) => void;
 
