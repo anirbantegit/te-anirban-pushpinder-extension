@@ -1,14 +1,16 @@
-import { createStorage, StorageType, type BaseStorage, SessionAccessLevel } from './base';
+import { createStorage } from './base';
 import { exampleThemeStorage } from './exampleThemeStorage';
-import { videoBlacklistStorage } from './blacklistStorage';
-import { userAuthStorage } from './authStorage';
+import { blockedVideosByTabStorage } from './blockedVideosByTabStorage';
+import { blacklistedVideosStorage } from './blacklistedVideosStorage';
+import { SessionAccessLevelEnum, StorageEnum } from './enums';
+import type { BaseStorage, BlockedVideoDetails } from './types';
 
 export {
-  videoBlacklistStorage,
-  userAuthStorage,
   exampleThemeStorage,
+  blacklistedVideosStorage,
+  blockedVideosByTabStorage,
   createStorage,
-  StorageType,
-  SessionAccessLevel,
-  BaseStorage,
+  StorageEnum,
+  SessionAccessLevelEnum,
 };
+export type { BaseStorage, BlockedVideoDetails };

@@ -1,4 +1,4 @@
-import { ManifestParserInterface, Manifest } from './type';
+import type { ManifestParserInterface, Manifest } from './type';
 
 export const ManifestParserImpl: ManifestParserInterface = {
   convertManifestToString: (manifest, env) => {
@@ -24,6 +24,12 @@ function convertToFirefoxCompatibleManifest(manifest: Manifest) {
   };
   manifestCopy.content_security_policy = {
     extension_pages: "script-src 'self'; object-src 'self'",
+  };
+  manifestCopy.browser_specific_settings = {
+    gecko: {
+      id: 'example@example.com',
+      strict_min_version: '109.0',
+    },
   };
   delete manifestCopy.options_page;
   return manifestCopy as Manifest;

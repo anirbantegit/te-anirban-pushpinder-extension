@@ -6,7 +6,7 @@
       "@src/*": ["src/*"]
     },
     "jsx": "react-jsx",
-    "types": ["chrome", "@emotion/react/types/css-prop"]
+    "types": ["chrome"]
   },
   "include": ["src"]
 }

@@ -1,6 +1,6 @@
 {
   "name": "@extension/popup",
-  "version": "0.2.2",
+  "version": "0.3.1",
   "description": "chrome extension popup",
   "private": true,
   "sideEffects": true,
@@ -18,16 +18,15 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@emotion/react": "^11.13.0",
+    "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@extension/content-runtime-script": "workspace:*",
     "@extension/shared": "workspace:*",
     "@extension/storage": "workspace:*",
-    "@mui/icons-material": "^5.16.7",
-    "@mui/material": "^5.16.7",
+    "@mui/icons-material": "^6.0.1",
+    "@mui/material": "^6.0.1",
     "@nextui-org/react": "^2.4.6",
-    "@types/node": "^20.14.10",
-    "styled-components": "^6.1.12"
+    "@types/node": "^20.14.10"
   },
   "devDependencies": {
     "@extension/tailwindcss-config": "workspace:*",

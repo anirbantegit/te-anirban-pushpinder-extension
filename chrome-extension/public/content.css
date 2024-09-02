@@ -1,11 +1,10 @@
-.detected-video.blocked {
+.detected-video.extension-blocked {
     position: relative;
     border: 2px solid #ff0000;
-    display: none !important;
-
+    /*display: none !important;*/
 }
 
-.detected-video.blocked::before {
+.detected-video.extension-blocked::before {
     content: '';
     position: absolute;
     top: 0;
@@ -15,5 +14,5 @@
     background-color: rgba(255, 0, 0, 0.2);
     pointer-events: none;
     z-index: 1;
-    
+
 }

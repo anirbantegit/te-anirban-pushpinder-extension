@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalEnv": ["__FIREFOX__"],
   "tasks": {
     "ready": {
       "outputs": [
@@ -14,10 +15,8 @@
       ],
       "outputs": [
         "dist/**",
-        "build/**"
-      ],
-      "env": [
-        "__FIREFOX__"
+        "build/**",
+        "i18n/locales/**"
       ],
       "persistent": true
     },
@@ -25,9 +24,6 @@
       "dependsOn": [
         "^build",
         "ready"
-      ],
-      "env": [
-        "__FIREFOX__"
       ],
       "outputs": [
         "../../dist/**",
@@ -37,7 +33,7 @@
     },
     "zip": {
       "dependsOn": [
-        "^build"
+        "build"
       ],
       "cache": false
     },
