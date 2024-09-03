@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Chip, Switch, TextField, Typography } from '@mui/material';
+import { Box, Card, CardContent, Chip, Switch, TextField, Typography } from '@mui/material';
 import { extensionStorage } from '@extension/storage/dist/lib';
-
+import CloseIcon from '@mui/icons-material/Close';
 interface UserEntriesProps {}
 
 export const UserEntries: React.FC<UserEntriesProps> = () => {
@@ -103,7 +103,8 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
                   onDelete={() => handleDeleteChip(chip)}
                   className="m-1"
                   variant="outlined"
-                  color="primary"
+                  style={{ backgroundColor: '#0B82EF', color: '#fff', borderRadius: '5px' }}
+                  deleteIcon={<CloseIcon style={{ color: '#fff' }} />}
                 />
               ))}
             </div>
