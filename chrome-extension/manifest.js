@@ -29,10 +29,10 @@ const manifest = deepmerge(
     },
     action: {
       default_popup: 'popup/index.html',
-      default_icon: 'icon-34.png',
+      default_icon: 'icon-34-new.png',
     },
     icons: {
-      128: 'icon-128.png',
+      128: 'icon-128-new.png',
     },
     content_scripts: [
       {
@@ -50,7 +50,7 @@ const manifest = deepmerge(
     ],
     web_accessible_resources: [
       {
-        resources: ['*.js', '*.css', '*.svg', 'icon-128.png', 'icon-34.png'],
+        resources: ['*.js', '*.css', '*.svg', 'icon-128-new.png', 'icon-34-new.png'],
         matches: ['https://www.youtube.com/*'],
       },
     ],
