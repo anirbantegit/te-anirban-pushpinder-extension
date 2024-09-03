@@ -1,6 +1,6 @@
 import { YouTubeChangeDetector } from './YouTubeChangeDetector';
 import type { BlockedVideoDetails, VideoData } from '@extension/storage/lib';
-import { blacklistedVideosStorage, blockedVideosByTabStorage } from '@extension/storage/lib';
+import { extensionStorage, blockedVideosByTabStorage } from '@extension/storage/lib';
 
 // Helper function to get the current tab ID
 const getCurrentTabId = async (): Promise<number> => {
@@ -133,8 +133,8 @@ const init = async () => {
    * Subscribes to updates in the blacklist storage and refreshes the blacklisted video IDs.
    */
   const subscribeToBlacklistUpdates = () => {
-    return blacklistedVideosStorage.subscribe(() => {
-      blacklistedVideosStorage.get().then(data => {
+    return extensionStorage.subscribe(() => {
+      extensionStorage.get().then(data => {
         blacklistedVideoIds = data.videoIdsToBeBlacklisted || [];
         console.log('Updated blacklistedVideoIds:', blacklistedVideoIds);
       });
@@ -145,7 +145,7 @@ const init = async () => {
    * Fetches the initial blacklist and initializes the YouTube change detector.
    */
 
-  blacklistedVideosStorage.get().then(data => {
+  extensionStorage.get().then(data => {
     blacklistedVideoIds = Object.values(data.videoIdsToBeBlacklisted)
       .flat()
       .map(videoId => videoId);

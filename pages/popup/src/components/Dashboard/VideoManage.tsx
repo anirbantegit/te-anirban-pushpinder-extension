@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TextField, Button, List, ListItem, ListItemText, IconButton } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { blacklistedVideosStorage } from '@extension/storage/lib';
+import { extensionStorage } from '@extension/storage/dist/lib';
 
 interface VideoManagerProps {}
 
@@ -12,15 +12,15 @@ export const VideoManager: React.FC<VideoManagerProps> = () => {
   useEffect(() => {
     // Initialize blacklisted videos
     const initializeBlacklistedVideos = async () => {
-      const data = await blacklistedVideosStorage.get();
+      const data = await extensionStorage.get();
       setBlacklistedVideos(data?.videoIdsToBeBlacklisted || []);
     };
 
     initializeBlacklistedVideos();
 
     // Subscribe to live updates
-    const unsubscribe = blacklistedVideosStorage.subscribe(async () => {
-      const data = await blacklistedVideosStorage.get();
+    const unsubscribe = extensionStorage.subscribe(async () => {
+      const data = await extensionStorage.get();
       setBlacklistedVideos(data?.videoIdsToBeBlacklisted || []);
     });
 
@@ -29,13 +29,13 @@ export const VideoManager: React.FC<VideoManagerProps> = () => {
 
   const handleAddVideo = async () => {
     if (videoId) {
-      await blacklistedVideosStorage.addVideoToBlacklist(videoId);
+      await extensionStorage.addVideoToBlacklist(videoId);
       setVideoId('');
     }
   };
 
   const handleRemoveVideo = async (id: string) => {
-    await blacklistedVideosStorage.removeVideoFromBlacklist(id);
+    await extensionStorage.removeVideoFromBlacklist(id);
   };
 
   return (

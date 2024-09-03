@@ -19,14 +19,27 @@ export type ThemeStorage = BaseStorage<Theme> & {
 export type BlacklistedVideosData = {
   videoIdsToBeBlacklisted: string[];
   instructions: null | string;
+  filterList: string[];
+  isBlockList: boolean;
 };
 
 export type BlacklistedVideosStorage = BaseStorage<BlacklistedVideosData> & {
   updateInstructions: (instructions: string | null) => Promise<void>;
   addVideoToBlacklist: (videoId: string) => Promise<void>;
+  updateVideoBlacklist: (newVideoIds: string[]) => Promise<void>;
   removeVideoFromBlacklist: (videoId: string) => Promise<void>;
   clearAllVideosFromBlacklist: () => Promise<void>;
   isVideoBlacklisted: (videoId: string) => Promise<boolean>;
+
+  // New methods for managing the filter list
+  addToFilterList: (filter: string) => Promise<void>;
+  updateFilterList: (filter: string[]) => Promise<void>;
+  removeFromFilterList: (filter: string) => Promise<void>;
+  clearFilterList: () => Promise<void>;
+
+  // New methods for handling the block or allow list type
+  setIsBlockList: (isBlockList: boolean) => Promise<void>;
+  getIsBlockList: () => Promise<boolean>;
 };
 
 export type VideoData = {
@@ -63,6 +76,7 @@ export type BlockedVideosByTabData = {
 
 export type BlockedVideosByTabStorage = BaseStorage<BlockedVideosByTabData> & {
   addVideoToTabBlacklist(tabId: number, detectedVideos: VideoData[], videoDetails: BlockedVideoDetails): Promise<void>;
+  updateTabBlacklist(tabId: number, detectedVideos: VideoData[], videoDetails: BlockedVideoDetails[]): Promise<void>;
   removeVideoFromTabBlacklist(tabId: number, videoId: string): Promise<void>;
   isVideoBlacklistedInTab(tabId: number, videoId: string): Promise<boolean>;
   clearTabBlacklist(tabId: number): Promise<void>;

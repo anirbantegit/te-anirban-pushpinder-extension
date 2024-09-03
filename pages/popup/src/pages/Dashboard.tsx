@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { PopupLayout } from '@src/components/layout/PopupLayout';
-import { VideoManager } from '@src/pages/VideoManage';
+import { VideoManager } from '@src/components/Dashboard/VideoManage';
 import type { BlockedVideoDetails } from '@extension/storage/lib';
-import { blockedVideosByTabStorage, blacklistedVideosStorage } from '@extension/storage';
+import { blockedVideosByTabStorage, extensionStorage } from '@extension/storage';
+import { Chip, Switch, TextField } from '@mui/material';
+import { UserEntries } from '@src/components/Dashboard/UserEntries';
 
 // Helper function to get the current tab ID
 const getCurrentTabId = async (): Promise<number> => {
@@ -14,15 +16,10 @@ const getCurrentTabId = async (): Promise<number> => {
 };
 
 export const Dashboard = () => {
-  const [contentFilter, setContentFilter] = useState('');
-  const [accordian, setAccordian] = useState(true);
+  const [accordian, setAccordian] = useState<boolean>(true);
   const [blockedVideos, setBlockedVideos] = useState<BlockedVideoDetails[]>([]);
   const [detectedVideos, setDetectedVideos] = useState<object[]>([]);
   const [tabId, setTabId] = useState<number | null>(null);
-
-  useEffect(() => {
-    console.log('Blocked Videos => ', { blockedVideos });
-  }, [blockedVideos]);
 
   useEffect(() => {
     const fetchTabId = async () => {
@@ -31,13 +28,6 @@ export const Dashboard = () => {
     };
 
     fetchTabId();
-
-    const fetchInstructions = async () => {
-      const { instructions } = await blacklistedVideosStorage.get();
-      setContentFilter(instructions || '');
-    };
-
-    fetchInstructions();
   }, []);
 
   useEffect(() => {
@@ -67,26 +57,12 @@ export const Dashboard = () => {
     }
   }, [tabId]);
 
-  useEffect(() => {
-    (async () => {
-      const trimmedFilter = contentFilter.trim();
-      await blacklistedVideosStorage.updateInstructions(trimmedFilter === '' ? null : trimmedFilter);
-    })();
-  }, [contentFilter]);
-
   return (
     <PopupLayout>
-      <VideoManager />
+      {/*<VideoManager />*/}
       <div className="flex flex-col space-y-3">
-        <div className="w-full">
-          <h4 className="text-sm font-medium mb-1">Filter</h4>
-          <textarea
-            placeholder="Type your filter instruction here"
-            value={contentFilter}
-            onChange={e => setContentFilter(e.target.value)}
-            className="w-full h-[60px] resize-none bg-white rounded-lg px-2 py-1.5"
-          />
-        </div>
+        <UserEntries/>
+
         <div className="w-full">
           <div className="bg-white rounded-lg">
             <div
@@ -149,32 +125,6 @@ export const Dashboard = () => {
             )}
           </div>
         </div>
-        {/* <div>
-          <h4 className="text-sm font-medium mb-1">Blacklisted Videos</h4>
-          <TextField
-            label="Video ID"
-            value={videoId}
-            onChange={e => setVideoId(e.target.value)}
-            variant="outlined"
-            fullWidth
-          />
-        </div>
-        <Button variant="contained" color="primary" onClick={handleAddVideo} disabled={!videoId}>
-          Add to Blacklist
-        </Button>
-        <List>
-          {blacklistedVideos.map(id => (
-            <ListItem
-              key={id}
-              secondaryAction={
-                <IconButton edge="end" aria-label="delete" onClick={() => handleRemoveVideo(id)}>
-                  <DeleteIcon />
-                </IconButton>
-              }>
-              <ListItemText primary={id} />
-            </ListItem>
-          ))}
-        </List> */}
       </div>
     </PopupLayout>
   );

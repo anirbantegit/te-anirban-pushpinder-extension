@@ -1,13 +1,13 @@
 import { createStorage } from './base';
 import { exampleThemeStorage } from './exampleThemeStorage';
 import { blockedVideosByTabStorage } from './blockedVideosByTabStorage';
-import { blacklistedVideosStorage } from './blacklistedVideosStorage';
+import { extensionStorage } from './extensionStorage';
 import { SessionAccessLevelEnum, StorageEnum } from './enums';
 import type { BaseStorage, BlockedVideoDetails, VideoData } from './types';
 
 export {
   exampleThemeStorage,
-  blacklistedVideosStorage,
+  extensionStorage,
   blockedVideosByTabStorage,
   createStorage,
   StorageEnum,

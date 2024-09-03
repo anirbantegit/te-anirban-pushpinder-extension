@@ -1,6 +1,6 @@
 import type { VideoData } from './YouTubeChangeDetector';
 import { YouTubeChangeDetector } from './YouTubeChangeDetector';
-import { blacklistedVideosStorage } from '@extension/storage/lib';
+import { extensionStorage } from '@extension/storage/lib';
 
 let blacklistedVideoIds: string[] = [];
 
@@ -61,8 +61,8 @@ const initializeDetector = () => {
  * Subscribes to updates in the blacklist storage and refreshes the blacklisted video IDs.
  */
 const subscribeToBlacklistUpdates = () => {
-  return blacklistedVideosStorage.subscribe(() => {
-    blacklistedVideosStorage.get().then(data => {
+  return extensionStorage.subscribe(() => {
+    extensionStorage.get().then(data => {
       blacklistedVideoIds = data.videoIdsToBeBlacklisted || [];
       console.log('Updated blacklistedVideoIds:', blacklistedVideoIds);
     });
@@ -73,7 +73,7 @@ const subscribeToBlacklistUpdates = () => {
  * Fetches the initial blacklist and initializes the YouTube change detector.
  */
 const initialize = () => {
-  blacklistedVideosStorage.get().then(data => {
+  extensionStorage.get().then(data => {
     blacklistedVideoIds = data.videoIdsToBeBlacklisted || [];
     console.log('Initial blacklistedVideoIds:', blacklistedVideoIds);
     initializeDetector();

@@ -35,6 +35,24 @@ export const blockedVideosByTabStorage: BlockedVideosByTabStorage = {
     });
   },
 
+  // Update the blacklist for a specific tab at once
+  updateTabBlacklist: async (tabId: number, detectedVideos: VideoData[], newBlacklist: BlockedVideoDetails[]) => {
+    await storage.set(current => {
+      const tabs = current.tabs || {}; // Ensure tabs is defined
+
+      return {
+        ...current,
+        tabs: {
+          ...tabs,
+          [tabId]: {
+            detectedVideos: detectedVideos, // Update detected videos as well
+            blacklisted: newBlacklist, // Replace with the new blacklist
+          },
+        },
+      };
+    });
+  },
+
   // Remove video ID from the blacklist for a specific tab
   removeVideoFromTabBlacklist: async (tabId: number, videoId: string) => {
     await storage.set(current => ({
