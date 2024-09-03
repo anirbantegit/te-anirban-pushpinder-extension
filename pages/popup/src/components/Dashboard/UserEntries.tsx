@@ -25,7 +25,6 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
     await extensionStorage.setIsBlockList(newValue); // Persist the value
   };
 
-
   useEffect(() => {
     const fetchInitialData = async () => {
       const { instructions, isBlockList, filterList } = await extensionStorage.get();
@@ -40,7 +39,7 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
   useEffect(() => {
     (async () => {
       const trimmedFilter = contentFilter.trim();
-      await extensionStorage.updateInstructions(trimmedFilter === '' ? null : trimmedFilter);  // Persist the instructions
+      await extensionStorage.updateInstructions(trimmedFilter === '' ? null : trimmedFilter); // Persist the instructions
       await extensionStorage.updateFilterList(filterList); // Persist the filter list
     })();
   }, [contentFilter, filterList]);
@@ -50,7 +49,7 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
       <CardContent>
         <div className="user-entries-container">
           {/* Card Header */}
-          <Typography variant="h5" component="div" className="mb-4 font-bold text-center">
+          <Typography variant="h5" component="div" className="mb-4 font-bold text-left">
             Filters
           </Typography>
 
@@ -95,11 +94,12 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
               fullWidth
               className="mb-2"
             />
-            <div className="flex flex-wrap mt-2">
+            <div className="flex flex-wrap gap-2 mt-2">
               {filterList.map((chip, index) => (
                 <Chip
                   key={`chip-${index}`}
                   label={chip}
+                  size="small"
                   onDelete={() => handleDeleteChip(chip)}
                   className="m-1"
                   variant="outlined"
@@ -112,5 +112,4 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
       </CardContent>
     </Card>
   );
-
-}
+};
