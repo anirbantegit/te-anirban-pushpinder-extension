@@ -32,12 +32,12 @@ function sendFilterRequestToBackground(tabId: number, detectedVideos: VideoData[
   );
 }
 
-let blacklistedVideoIds: string[] = [];
+let detectedVideos: VideoData[] = [];
 const markingClassName: string = 'extension-blocked';
 
 // Initialize the application
 const init = async () => {
-  let tabId: number = await getCurrentTabId();
+  const tabId: number = await getCurrentTabId();
 
   /**
    * Callback function to handle detected video content changes.
@@ -46,38 +46,24 @@ const init = async () => {
   const onContentChange = async (videos: VideoData[], url: string) => {
     console.log('Current URL:', url);
     console.log('Detected videos:', videos);
+    detectedVideos = videos;
 
-    // @ts-ignore
     sendFilterRequestToBackground(tabId, videos);
-
-    // Separate videos into blacklisted and non-blacklisted
-    const { blacklisted, notBlacklisted } = categorizeVideos(videos, blacklistedVideoIds);
-
-    // Update DOM classes based on blacklist status
-    updateDomClasses(blacklisted, notBlacklisted);
-
-    // Store blacklisted videos in storage by tab ID
-    await storeBlockedVideos(tabId, videos, blacklisted);
-
-    // Log filtered videos for debugging purposes
-    console.log('Videos in blacklist:', blacklisted);
-    console.log('Videos not in blacklist:', notBlacklisted);
   };
 
   /**
-   * Categorizes videos into blacklisted and non-blacklisted.
+   * Filter detected videos by received blacklisted suggestions
    */
-  const categorizeVideos = (videos: VideoData[], blacklist: string[]) => {
-    const blacklisted = videos.filter(video => blacklist.includes(video.videoId));
-    const notBlacklisted = videos.filter(video => !blacklist.includes(video.videoId));
-
-    return { blacklisted, notBlacklisted };
+  const filterDetectedVideosByReceivedBlacklistedSuggestions = (blacklistedVideos: BlockedVideoDetails[]) => {
+    return detectedVideos.filter(video =>
+      blacklistedVideos.some(blacklistedVideo => blacklistedVideo.videoId === video.videoId),
+    );
   };
 
   /**
    * Updates DOM elements based on blacklist status.
    */
-  const updateDomClasses = (blacklistedVideos: VideoData[], nonBlacklistedVideos: VideoData[]) => {
+  const updateDomClasses = (blacklistedVideos: VideoData[]) => {
     const elementsWithBlockedClass = document.querySelectorAll(`.${markingClassName}`);
     elementsWithBlockedClass.forEach(element => {
       element.classList.remove(`${markingClassName}`);
@@ -88,18 +74,12 @@ const init = async () => {
         video.referenceDom.classList.add(`${markingClassName}`);
       }
     });
-
-    /*nonBlacklistedVideos.forEach(video => {
-      if (video.referenceDom.classList.contains('blocked')) {
-        video.referenceDom.classList.remove('blocked');
-      }
-    });*/
   };
 
   /**
    * Stores blocked videos in the storage by tab ID.
    */
-  const storeBlockedVideos = async (tabId: number, detectedVideos: VideoData[], blacklistedVideos: VideoData[]) => {
+  const storeBlockedVideos = async (tabId: number, blacklistedVideos: VideoData[]) => {
     const timestamp = new Date().toISOString();
 
     // Clear old entries if it exists
@@ -133,10 +113,19 @@ const init = async () => {
    * Subscribes to updates in the blacklist storage and refreshes the blacklisted video IDs.
    */
   const subscribeToBlacklistUpdates = () => {
-    return extensionStorage.subscribe(() => {
-      extensionStorage.get().then(data => {
-        blacklistedVideoIds = data.videoIdsToBeBlacklisted || [];
-        console.log('Updated blacklistedVideoIds:', blacklistedVideoIds);
+    return blockedVideosByTabStorage.subscribe(() => {
+      blockedVideosByTabStorage.get().then(async data => {
+        const { blacklisted, detectedVideos } = data.tabs[tabId] ?? null;
+
+        // Separate videos into blacklisted and non-blacklisted
+        const detectedBlacklistedVideos: VideoData[] =
+          filterDetectedVideosByReceivedBlacklistedSuggestions(blacklisted);
+
+        // Update DOM classes based on blacklist status
+        updateDomClasses(detectedBlacklistedVideos);
+
+        // Log filtered videos for debugging purposes
+        console.log('Videos in blacklist:', blacklisted);
       });
     });
   };
@@ -146,10 +135,6 @@ const init = async () => {
    */
 
   extensionStorage.get().then(data => {
-    blacklistedVideoIds = Object.values(data.videoIdsToBeBlacklisted)
-      .flat()
-      .map(videoId => videoId);
-    console.log('Initial blacklistedVideoIds:', blacklistedVideoIds);
     initializeDetector();
   });
   const unsubscribe = subscribeToBlacklistUpdates();

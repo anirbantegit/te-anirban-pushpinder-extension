@@ -1,10 +1,6 @@
 import 'webextension-polyfill';
 import type { VideoData, BlockedVideoDetails } from '@extension/storage';
-import {
-  blockedVideosByTabStorage,
-  exampleThemeStorage,
-  extensionStorage,
-} from '@extension/storage';
+import { blockedVideosByTabStorage, exampleThemeStorage, extensionStorage } from '@extension/storage';
 import type { IAPIPayloadEither, IAPIResponse, IAPIVideoResponse, IPayloadVideo } from '@lib/background/types';
 
 // Log the current theme for debugging purposes
@@ -13,7 +9,7 @@ exampleThemeStorage.get().then(theme => {
 });
 
 console.log('Background script loaded');
-console.log('Edit \'chrome-extension/lib/background/index.ts\' and save to reload.');
+console.log("Edit 'chrome-extension/lib/background/index.ts' and save to reload.");
 
 // Debounce timers for each tab to manage rapid consecutive events
 const debounceTimers: Record<number, number> = {};
@@ -31,7 +27,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true; // Indicates asynchronous response
 
     case 'filterVideosForTab':
-      console.log("HITTED...");
+      console.log('HITTED...');
       handleFilterVideosForTab(message, sendResponse);
       return true; // Indicates asynchronous response
 
@@ -111,10 +107,10 @@ function handleFilterVideosForTab(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        signal
+        signal,
       });
 
-      console.log("RESP => ", {response});
+      console.log('RESP => ', { response });
 
       // Check if the response is OK
       if (!response.ok) {
@@ -122,11 +118,11 @@ function handleFilterVideosForTab(
         return;
       }
 
-      const data = await response.json() as IAPIResponse;
+      const data = (await response.json()) as IAPIResponse;
 
       const blockedVideoIds: string[] = data
-        .filter((datum: IAPIVideoResponse) => (datum.blocked))
-        .map(datum => (datum.uuid));
+        .filter((datum: IAPIVideoResponse) => datum.blocked)
+        .map(datum => datum.uuid);
 
       const blacklistedDetectedVideos: BlockedVideoDetails[] = detectedVideos
         .filter(detectedVideo => blockedVideoIds.some(id => detectedVideo.videoId === id))
@@ -140,10 +136,9 @@ function handleFilterVideosForTab(
           thumbnail: detectedVideo.thumbnail,
         }));
 
-      console.log("fff => ", blacklistedDetectedVideos);
+      console.log('fff => ', blacklistedDetectedVideos);
 
-      /*await blockedVideosByTabStorage.updateTabBlacklist(tabId, detectedVideos, blacklistedDetectedVideos);
-      await extensionStorage.updateVideoBlacklist(blockedVideoIds);*/
+      await blockedVideosByTabStorage.updateTabBlacklist(tabId, detectedVideos, blacklistedDetectedVideos);
 
       // Send the filtered video data back to the content script
       chrome.tabs.sendMessage(tabId, { action: 'filterVideosResponse', error: null, data: blockedVideoIds });

@@ -1,7 +1,7 @@
 .detected-video.extension-blocked {
     position: relative;
     border: 2px solid #ff0000;
-    /*display: none !important;*/
+    display: none !important;
 }
 
 .detected-video.extension-blocked::before {

@@ -9,6 +9,7 @@ const storage = createStorage<BlockedVideosByTabData>(
   },
   {
     storageEnum: StorageEnum.Local,
+    sessionAccessForContentScripts: true,
     liveUpdate: true,
   },
 );
