@@ -55,13 +55,15 @@ export const Dashboard = () => {
       // Cleanup subscription on component unmount
       return () => unsubscribe();
     }
+    // Return nothing if tabId is null
+    return undefined;
   }, [tabId]);
 
   return (
     <PopupLayout>
       {/*<VideoManager />*/}
       <div className="flex flex-col space-y-3">
-        <UserEntries/>
+        <UserEntries />
 
         <div className="w-full">
           <div className="bg-white rounded-lg">

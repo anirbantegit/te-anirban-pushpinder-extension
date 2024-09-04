@@ -80,7 +80,6 @@ export type BlockedVideosByTabStorage = BaseStorage<BlockedVideosByTabData> & {
   removeVideoFromTabBlacklist(tabId: number, videoId: string): Promise<void>;
   isVideoBlacklistedInTab(tabId: number, videoId: string): Promise<boolean>;
   clearTabBlacklist(tabId: number): Promise<void>;
-  getTotalDetectedVideosForTab(tabId: number): Promise<number>;
 };
 
 // Common configuration type

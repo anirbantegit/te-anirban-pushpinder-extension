@@ -88,10 +88,4 @@ export const blockedVideosByTabStorage: BlockedVideosByTabStorage = {
       };
     });
   },
-
-  // Get the total number of detected videos for a specific tab
-  getTotalDetectedVideosForTab: async (tabId: number) => {
-    const { tabs } = await storage.get();
-    return tabs[tabId]?.detectedVideos || 0;
-  },
 };

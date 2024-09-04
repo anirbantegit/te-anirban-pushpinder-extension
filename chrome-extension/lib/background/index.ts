@@ -12,7 +12,7 @@ console.log('Background script loaded');
 console.log("Edit 'chrome-extension/lib/background/index.ts' and save to reload.");
 
 // Debounce timers for each tab to manage rapid consecutive events
-const debounceTimers: Record<number, number> = {};
+const debounceTimers: Record<number, ReturnType<typeof setTimeout>> = {};
 
 // Abort controllers for each tab to cancel ongoing requests if necessary
 const abortControllers: Record<number, AbortController> = {};
@@ -80,7 +80,9 @@ function handleFilterVideosForTab(
       const { instructions, filterList, isBlockList } = await extensionStorage.get();
 
       // Initialize the payload with the detected videos
-      const payload: IAPIPayloadEither | object = {};
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      const payload: IAPIPayloadEither = {};
 
       payload.videos = detectedVideos.map<IPayloadVideo>(detectedVideo => ({
         uuid: detectedVideo.videoId,
@@ -90,7 +92,7 @@ function handleFilterVideosForTab(
         channel_name: detectedVideo.channel,
         channel_id: detectedVideo.channelId,
         channel_url: `https://youtube.com${detectedVideo.channelId}`,
-      }));
+      })) as IPayloadVideo[];
 
       // Prepare filters and assign them to the appropriate list
       const filters: string[] = filterList ?? [];
@@ -144,7 +146,7 @@ function handleFilterVideosForTab(
       chrome.tabs.sendMessage(tabId, { action: 'filterVideosResponse', error: null, data: blockedVideoIds });
       sendResponse({ status: 'success' });
     } catch (error) {
-      handleError(tabId, error, sendResponse);
+      handleError(tabId, error as Error, sendResponse);
     } finally {
       // Cleanup the abort controller after the request is done
       cleanupAfterRequest(tabId);

@@ -1,4 +1,4 @@
-import type { VideoData } from '@extension/storage/dist/lib';
+import type { VideoData } from '@extension/storage/lib';
 
 type ChangeCallback = (videos: VideoData[], url: string) => void;
 
