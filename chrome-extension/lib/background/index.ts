@@ -1,5 +1,5 @@
 import 'webextension-polyfill';
-import type { VideoData, BlockedVideoDetails } from '@extension/storage';
+import type { typeExtensionVideoData, IBlockedVideoDetails } from '@extension/storage';
 import { blockedVideosByTabStorage, exampleThemeStorage, extensionStorage } from '@extension/storage';
 import type { IAPIPayloadEither, IAPIResponse, IAPIVideoResponse, IPayloadVideo } from '@lib/background/types';
 
@@ -52,7 +52,7 @@ function handleGetCurrentTabId(sendResponse: (response: { tabId: number }) => vo
  * @param sendResponse - Callback function to send the response
  */
 function handleFilterVideosForTab(
-  message: { tabId: number; detectedVideos: VideoData[] },
+  message: { tabId: number; detectedVideos: typeExtensionVideoData[] },
   sendResponse: (response: { status: string; error?: string }) => void,
 ) {
   const { tabId, detectedVideos } = message;
@@ -126,7 +126,7 @@ function handleFilterVideosForTab(
         .filter((datum: IAPIVideoResponse) => datum.blocked)
         .map(datum => datum.uuid);
 
-      const blacklistedDetectedVideos: BlockedVideoDetails[] = detectedVideos
+      const blacklistedDetectedVideos: IBlockedVideoDetails[] = detectedVideos
         .filter(detectedVideo => blockedVideoIds.some(id => detectedVideo.videoId === id))
         .map(detectedVideo => ({
           videoId: detectedVideo.videoId,

@@ -1,6 +1,6 @@
-import type { VideoData } from '@extension/storage/lib';
+import type { typeExtensionVideoData } from '@extension/storage/lib';
 
-type ChangeCallback = (videos: VideoData[], url: string) => void;
+type ChangeCallback = (videos: typeExtensionVideoData[], url: string) => void;
 
 export class YouTubeChangeDetector {
   private observer!: MutationObserver;
@@ -75,7 +75,7 @@ export class YouTubeChangeDetector {
   /**
    * Handles detected video changes, triggering the callback if new videos are found.
    */
-  private handleVideoChanges(newVideos: VideoData[]) {
+  private handleVideoChanges(newVideos: typeExtensionVideoData[]) {
     const newVideoIds = new Set(newVideos.map(video => video.videoId));
 
     if (!this.areSetsEqual(this.previousVideoIds, newVideoIds)) {
@@ -87,7 +87,7 @@ export class YouTubeChangeDetector {
   /**
    * Queries videos based on the current URL, distinguishing between homepage, sidebar, and search results.
    */
-  private queryVideosBasedOnUrl(): VideoData[] {
+  private queryVideosBasedOnUrl(): typeExtensionVideoData[] {
     const url = window.location.href;
 
     if (url.includes('watch')) {
@@ -102,7 +102,7 @@ export class YouTubeChangeDetector {
   /**
    * Queries and fetches sidebar videos from the YouTube watch view.
    */
-  private querySidebarVideos(): VideoData[] {
+  private querySidebarVideos(): typeExtensionVideoData[] {
     return this.queryVideos(
       'ytd-compact-video-renderer',
       'ytd-channel-name',
@@ -117,7 +117,7 @@ export class YouTubeChangeDetector {
   /**
    * Queries and fetches videos from the YouTube homepage.
    */
-  private queryHomepageVideos(): VideoData[] {
+  private queryHomepageVideos(): typeExtensionVideoData[] {
     return this.queryVideos(
       'ytd-rich-item-renderer',
       'ytd-channel-name',
@@ -132,7 +132,7 @@ export class YouTubeChangeDetector {
   /**
    * Queries and fetches videos from YouTube search results.
    */
-  private querySearchVideos(): VideoData[] {
+  private querySearchVideos(): typeExtensionVideoData[] {
     return this.queryVideos(
       'ytd-video-renderer',
       'ytd-channel-name',
@@ -154,8 +154,8 @@ export class YouTubeChangeDetector {
     thumbNailSelector: string | string[],
     metadataSelector: string,
     anchorSelector: string,
-    type: VideoData['type'],
-  ): VideoData[] {
+    type: typeExtensionVideoData['type'],
+  ): typeExtensionVideoData[] {
     const videoRenderers = document.querySelectorAll(containerSelector);
     const videoIdRegex = /\/watch\?v=([a-zA-Z0-9_-]{11})/;
 
@@ -190,7 +190,7 @@ export class YouTubeChangeDetector {
           const views = this.extractViews(renderer.querySelector(metadataSelector));
           const videoType = this.isPlaylist(renderer.querySelector(playlistSelector)) ? 'playlist' : 'video';
 
-          const videoData: VideoData = {
+          const videoData: typeExtensionVideoData = {
             videoId,
             title,
             thumbnail,
@@ -207,7 +207,7 @@ export class YouTubeChangeDetector {
         }
         return null;
       })
-      .filter(item => item !== null) as VideoData[];
+      .filter(item => item !== null) as typeExtensionVideoData[];
   }
 
   /**

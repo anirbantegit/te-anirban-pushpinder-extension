@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PopupLayout } from '@src/components/layout/PopupLayout';
 import { VideoManager } from '@src/components/Dashboard/VideoManage';
-import type { BlockedVideoDetails } from '@extension/storage/lib';
+import type { IBlockedVideoDetails } from '@extension/storage/lib';
 import { blockedVideosByTabStorage, extensionStorage } from '@extension/storage';
 import { Chip, Switch, TextField } from '@mui/material';
 import { UserEntries } from '@src/components/Dashboard/UserEntries';
@@ -17,7 +17,7 @@ const getCurrentTabId = async (): Promise<number> => {
 
 export const Dashboard = () => {
   const [accordian, setAccordian] = useState<boolean>(true);
-  const [blockedVideos, setBlockedVideos] = useState<BlockedVideoDetails[]>([]);
+  const [blockedVideos, setBlockedVideos] = useState<IBlockedVideoDetails[]>([]);
   const [detectedVideos, setDetectedVideos] = useState<object[]>([]);
   const [tabId, setTabId] = useState<number | null>(null);
 

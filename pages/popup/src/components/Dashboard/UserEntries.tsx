@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Card, CardContent, CardHeader, Chip, Switch, TextField, Typography } from '@mui/material';
-import { extensionStorage } from '@extension/storage/dist/lib';
+import { Card, CardContent, Chip, Switch, TextField, Typography } from '@mui/material';
+import { extensionStorage, EnumExtensionStorageListMode } from '@extension/storage';
 import CloseIcon from '@mui/icons-material/Close';
+
 interface UserEntriesProps {}
 
 export const UserEntries: React.FC<UserEntriesProps> = () => {
   const [contentFilter, setContentFilter] = useState<string>('');
-  const [isBlockList, setIsBlockList] = useState<boolean>(true); // True for block, false for allow
   const [filterList, setFilterList] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState<string>(''); // For managing the input field
   const [accordian, setAccordian] = useState<boolean>(true);
+  const [activeMode, setActiveMode] = useState<EnumExtensionStorageListMode>(EnumExtensionStorageListMode.BLOCK_LIST);
 
   const handleAddChip = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' && inputValue.trim()) {
@@ -20,17 +21,13 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
   const handleDeleteChip = (chipToDelete: string) => {
     setFilterList(filterList.filter(chip => chip !== chipToDelete));
   };
-  const handleSwitchChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = event.target.checked;
-    setIsBlockList(newValue);
-    await extensionStorage.setIsBlockList(newValue); // Persist the value
-  };
 
   useEffect(() => {
     const fetchInitialData = async () => {
-      const { instructions, isBlockList, filterList } = await extensionStorage.get();
+      const { instructions, listMode, filterList } = await extensionStorage.get();
+      console.log('AAA => ', { instructions, listMode, filterList });
       setContentFilter(instructions || '');
-      setIsBlockList(isBlockList);
+      setActiveMode(listMode);
       setFilterList(filterList);
     };
 
@@ -45,55 +42,22 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
     })();
   }, [contentFilter, filterList]);
 
+  const getButtonClass = (mode: EnumExtensionStorageListMode): string => {
+    return activeMode === mode
+      ? 'text-[#000] py-[5px] px-2 font-medium bg-[#0B82EF] text-[#fff] rounded-[5px]'
+      : 'text-[#000] py-[5px] px-2 font-medium rounded-[5px]';
+  };
+
+  useEffect(() => {
+    console.log('Mode => ', activeMode);
+    (async () => {
+      console.log('Mode => ', activeMode);
+      await extensionStorage.setBlockList(activeMode);
+    })();
+  }, [activeMode]);
+
   return (
     <>
-      {/* <Card sx={{ maxWidth: 600, minWidth: '100%', margin: '0 auto', boxShadow: 3 }}>
-
-        <CardContent>
-          <div className="user-entries-container">
-            <Typography variant="subtitle1" component="h5" className="mb-4 font-bold text-left">
-              All Filters
-            </Typography>
-            <div className="mb-4">
-              <TextField
-                placeholder="Type your filter instruction here"
-                value={contentFilter}
-                onChange={e => setContentFilter(e.target.value)}
-                variant="outlined"
-                fullWidth
-                className="mb-4"
-              />
-            </div>
-
-            <div className="w-full">
-              <TextField
-                variant="outlined"
-                placeholder="Enter Keywords"
-                value={inputValue}
-                onChange={e => setInputValue(e.target.value)}
-                onKeyDown={handleAddChip}
-                fullWidth
-                className="mb-2"
-              />
-              <div className="flex flex-wrap gap-2 mt-2">
-                {filterList.map((chip, index) => (
-                  <Chip
-                    key={`chip-${index}`}
-                    label={chip}
-                    size="small"
-                    onDelete={() => handleDeleteChip(chip)}
-                    className="m-1"
-                    variant="outlined"
-                    style={{ backgroundColor: '#0B82EF', color: '#fff', borderRadius: '5px' }}
-                    deleteIcon={<CloseIcon style={{ color: '#fff' }} />}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card> */}
-
       <div className="w-full">
         <Typography variant="subtitle2" component="h5" className="mb-0 text-left">
           <span className="font-medium">All Filters</span>
@@ -105,20 +69,44 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
         focus:outline-none focus:shadow-outline focus:border-[#0B82EF]"
               type="text"
               placeholder="Blocked Topics"
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onKeyDown={handleAddChip}
             />
+            <div className="flex flex-wrap gap-2 mt-2">
+              {filterList.map((chip, index) => (
+                <Chip
+                  key={`chip-${index}`}
+                  label={chip}
+                  size="small"
+                  onDelete={() => handleDeleteChip(chip)}
+                  className="m-1"
+                  variant="outlined"
+                  style={{ backgroundColor: '#0B82EF', color: '#fff', borderRadius: '5px' }}
+                  deleteIcon={<CloseIcon style={{ color: '#fff' }} />}
+                />
+              ))}
+            </div>
           </div>
           <div className="w-full">
             <div className="flex">
               <div className="bg-[#fff] rounded-[5px] p-[3px] flex items-center">
-                <button type="button" className="text-[#000] py-[5px] px-2 font-medium rounded-[5px]">
+                <button
+                  type="button"
+                  className={getButtonClass(EnumExtensionStorageListMode.DISABLED)}
+                  onClick={() => setActiveMode(EnumExtensionStorageListMode.DISABLED)}>
                   Disabled
                 </button>
-                <button type="button" className="text-[#000] py-[5px] px-2 font-medium rounded-[5px]">
+                <button
+                  type="button"
+                  className={getButtonClass(EnumExtensionStorageListMode.ALLOW_LIST)}
+                  onClick={() => setActiveMode(EnumExtensionStorageListMode.ALLOW_LIST)}>
                   Allow List Mode
                 </button>
                 <button
                   type="button"
-                  className="text-[#000] py-[5px] px-2 font-medium bg-[#0B82EF] text-[#fff] rounded-[5px]">
+                  className={getButtonClass(EnumExtensionStorageListMode.BLOCK_LIST)}
+                  onClick={() => setActiveMode(EnumExtensionStorageListMode.BLOCK_LIST)}>
                   Block List Mode
                 </button>
               </div>
@@ -201,34 +189,19 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
 
       <div className="flex items-center justify-between pt-0 mt-0">
         <div className="flex items-center">
-          <Switch
-            checked={isBlockList}
-            onChange={handleSwitchChange}
-            color="primary"
-            inputProps={{ 'aria-label': 'block allow switch' }}
-          />
+          <Switch color="primary" inputProps={{ 'aria-label': 'block allow switch' }} />
           <Typography variant="subtitle2" className="ml-2">
-            {isBlockList ? 'Block Shorts' : 'Allow Shorts'}
+            {true ? 'Block Shorts' : 'Allow Shorts'}
           </Typography>
         </div>
         <div className="flex items-center">
-          <Switch
-            checked={isBlockList}
-            onChange={handleSwitchChange}
-            color="primary"
-            inputProps={{ 'aria-label': 'block allow switch' }}
-          />
+          <Switch color="primary" inputProps={{ 'aria-label': 'block allow switch' }} />
           <Typography variant="subtitle2" className="ml-2">
             Block Playlists
           </Typography>
         </div>
         <div className="flex items-center">
-          <Switch
-            checked={isBlockList}
-            onChange={handleSwitchChange}
-            color="primary"
-            inputProps={{ 'aria-label': 'block allow switch' }}
-          />
+          <Switch color="primary" inputProps={{ 'aria-label': 'block allow switch' }} />
           <Typography variant="subtitle2" className="ml-2">
             Block Banners
           </Typography>

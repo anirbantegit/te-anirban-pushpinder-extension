@@ -40,3 +40,9 @@ export enum SessionAccessLevelEnum {
    */
   ExtensionPagesAndContentScripts = 'TRUSTED_AND_UNTRUSTED_CONTEXTS',
 }
+
+export enum EnumExtensionStorageListMode {
+  DISABLED = 'DISABLED',
+  ALLOW_LIST = 'ALLOW_LIST',
+  BLOCK_LIST = 'BLOCK_LIST',
+}

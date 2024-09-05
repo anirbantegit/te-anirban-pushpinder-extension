@@ -1,6 +1,11 @@
 import { createStorage } from './base';
 import { StorageEnum } from './enums';
-import type { BlockedVideosByTabStorage, BlockedVideosByTabData, BlockedVideoDetails, VideoData } from './types';
+import type {
+  BlockedVideosByTabStorage,
+  BlockedVideosByTabData,
+  IBlockedVideoDetails,
+  typeExtensionVideoData,
+} from './types';
 
 const storage = createStorage<BlockedVideosByTabData>(
   'blocked-videos-by-tab-storage-key',
@@ -18,7 +23,11 @@ export const blockedVideosByTabStorage: BlockedVideosByTabStorage = {
   ...storage,
 
   // Add video to the blacklist for a specific tab and update total detected videos count
-  addVideoToTabBlacklist: async (tabId: number, detectedVideos: VideoData[], videoDetails: BlockedVideoDetails) => {
+  addVideoToTabBlacklist: async (
+    tabId: number,
+    detectedVideos: typeExtensionVideoData[],
+    videoDetails: IBlockedVideoDetails,
+  ) => {
     await storage.set(current => {
       const tabs = current.tabs || {}; // Ensure tabs is defined
       const existingTabData = tabs[tabId] || { detectedVideos: [], blacklisted: [] };
@@ -37,7 +46,11 @@ export const blockedVideosByTabStorage: BlockedVideosByTabStorage = {
   },
 
   // Update the blacklist for a specific tab at once
-  updateTabBlacklist: async (tabId: number, detectedVideos: VideoData[], newBlacklist: BlockedVideoDetails[]) => {
+  updateTabBlacklist: async (
+    tabId: number,
+    detectedVideos: typeExtensionVideoData[],
+    newBlacklist: IBlockedVideoDetails[],
+  ) => {
     await storage.set(current => {
       const tabs = current.tabs || {}; // Ensure tabs is defined
 

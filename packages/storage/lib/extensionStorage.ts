@@ -1,14 +1,14 @@
 import { createStorage } from './base';
-import { StorageEnum } from './enums';
-import type { BlacklistedVideosStorage, BlacklistedVideosData } from './types';
+import { StorageEnum, EnumExtensionStorageListMode } from './enums';
+import type { typeExtensionStorage, typeExtensionStorageData } from './types';
 
-const storage = createStorage<BlacklistedVideosData>(
+const storage = createStorage<typeExtensionStorageData>(
   'extension-storage-key',
   {
     videoIdsToBeBlacklisted: [],
     instructions: null,
     filterList: [],
-    isBlockList: true,
+    listMode: EnumExtensionStorageListMode.BLOCK_LIST,
   },
   {
     storageEnum: StorageEnum.Local,
@@ -16,7 +16,7 @@ const storage = createStorage<BlacklistedVideosData>(
   },
 );
 
-export const extensionStorage: BlacklistedVideosStorage = {
+export const extensionStorage: typeExtensionStorage = {
   ...storage,
 
   ////// POPUP UIs -
@@ -63,21 +63,19 @@ export const extensionStorage: BlacklistedVideosStorage = {
   },
 
   //// IS BLOCKLIST OR NOT...
-  // Set the list type (block or allow)
-  setIsBlockList: async (isBlockList: boolean) => {
+  // Set the list type (disabled, block or allow)
+  setBlockList: async (listMode: EnumExtensionStorageListMode) => {
     await storage.set(current => ({
       ...current,
-      isBlockList,
+      listMode,
     }));
   },
 
   // Get the current list type
-  getIsBlockList: async () => {
-    const { isBlockList } = await storage.get();
-    return isBlockList;
+  getBlockList: async (): Promise<EnumExtensionStorageListMode> => {
+    const { listMode } = await storage.get();
+    return listMode;
   },
-
-
 
   ////// EXPERIMENTAL PURPOSES
   // Add video ID to the blacklist

@@ -1,5 +1,5 @@
 import { YouTubeChangeDetector } from './YouTubeChangeDetector';
-import type { BlockedVideoDetails, VideoData } from '@extension/storage/lib';
+import type { IBlockedVideoDetails, typeExtensionVideoData } from '@extension/storage/lib';
 import { extensionStorage, blockedVideosByTabStorage } from '@extension/storage/lib';
 
 // Helper function to get the current tab ID
@@ -14,7 +14,7 @@ const getCurrentTabId = async (): Promise<number> => {
     });
   });
 };
-function sendFilterRequestToBackground(tabId: number, detectedVideos: VideoData[]) {
+function sendFilterRequestToBackground(tabId: number, detectedVideos: typeExtensionVideoData[]) {
   // Send a message to the background script to filter videos
   chrome.runtime.sendMessage(
     {
@@ -32,7 +32,7 @@ function sendFilterRequestToBackground(tabId: number, detectedVideos: VideoData[
   );
 }
 
-let detectedVideos: VideoData[] = [];
+let detectedVideos: typeExtensionVideoData[] = [];
 const markingClassName: string = 'extension-blocked';
 
 // Initialize the application
@@ -43,7 +43,7 @@ const init = async () => {
    * Callback function to handle detected video content changes.
    * Filters out blacklisted videos and updates the DOM accordingly.
    */
-  const onContentChange = async (videos: VideoData[], url: string) => {
+  const onContentChange = async (videos: typeExtensionVideoData[], url: string) => {
     console.log('Current URL:', url);
     console.log('Detected videos:', videos);
     detectedVideos = videos;
@@ -54,7 +54,7 @@ const init = async () => {
   /**
    * Filter detected videos by received blacklisted suggestions
    */
-  const filterDetectedVideosByReceivedBlacklistedSuggestions = (blacklistedVideos: BlockedVideoDetails[]) => {
+  const filterDetectedVideosByReceivedBlacklistedSuggestions = (blacklistedVideos: IBlockedVideoDetails[]) => {
     return detectedVideos.filter(video =>
       blacklistedVideos.some(blacklistedVideo => blacklistedVideo.videoId === video.videoId),
     );
@@ -63,7 +63,7 @@ const init = async () => {
   /**
    * Updates DOM elements based on blacklist status.
    */
-  const updateDomClasses = (blacklistedVideos: VideoData[]) => {
+  const updateDomClasses = (blacklistedVideos: typeExtensionVideoData[]) => {
     const elementsWithBlockedClass = document.querySelectorAll(`.${markingClassName}`);
     elementsWithBlockedClass.forEach(element => {
       element.classList.remove(`${markingClassName}`);
@@ -74,31 +74,6 @@ const init = async () => {
         video.referenceDom.classList.add(`${markingClassName}`);
       }
     });
-  };
-
-  /**
-   * Stores blocked videos in the storage by tab ID.
-   */
-  const storeBlockedVideos = async (tabId: number, blacklistedVideos: VideoData[]) => {
-    const timestamp = new Date().toISOString();
-
-    // Clear old entries if it exists
-    await blockedVideosByTabStorage.clearTabBlacklist(tabId);
-
-    for (const video of blacklistedVideos) {
-      const videoDetails: BlockedVideoDetails = {
-        videoId: video.videoId,
-        title: video.title,
-        channel: video.channel,
-        channelId: video.channelId,
-        thumbnail: video.thumbnail,
-        videoType: video.videoType,
-        detectedAt: timestamp,
-      };
-
-      // Add the new entry
-      await blockedVideosByTabStorage.addVideoToTabBlacklist(tabId, detectedVideos, videoDetails);
-    }
   };
 
   /**
@@ -115,10 +90,10 @@ const init = async () => {
   const subscribeToBlacklistUpdates = () => {
     return blockedVideosByTabStorage.subscribe(() => {
       blockedVideosByTabStorage.get().then(async data => {
-        const { blacklisted, detectedVideos } = data.tabs[tabId] ?? null;
+        const { blacklisted } = data.tabs[tabId] ?? null;
 
         // Separate videos into blacklisted and non-blacklisted
-        const detectedBlacklistedVideos: VideoData[] =
+        const detectedBlacklistedVideos: typeExtensionVideoData[] =
           filterDetectedVideosByReceivedBlacklistedSuggestions(blacklisted);
 
         // Update DOM classes based on blacklist status
@@ -133,6 +108,11 @@ const init = async () => {
   /**
    * Fetches the initial blacklist and initializes the YouTube change detector.
    */
+
+  extensionStorage.subscribe(async () => {
+    const data = await extensionStorage.getBlockList();
+    console.log('getBlockList => ', { data });
+  });
 
   extensionStorage.get().then(data => {
     initializeDetector();

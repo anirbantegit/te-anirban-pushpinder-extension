@@ -1,4 +1,5 @@
 import type { StorageEnum } from './enums';
+import { EnumExtensionStorageListMode } from './enums';
 
 export type ValueOrUpdate<D> = D | ((prev: D) => Promise<D> | D);
 
@@ -15,15 +16,17 @@ export type ThemeStorage = BaseStorage<Theme> & {
   toggle: () => Promise<void>;
 };
 
-// Types for blacklisted videos
-export type BlacklistedVideosData = {
+// Types for extension storage
+export type typeExtensionStorageListMode = 'DISABLED' | 'ALLOW_LIST' | 'BLOCK_LIST';
+
+export type typeExtensionStorageData = {
   videoIdsToBeBlacklisted: string[];
   instructions: null | string;
   filterList: string[];
-  isBlockList: boolean;
+  listMode: EnumExtensionStorageListMode;
 };
 
-export type BlacklistedVideosStorage = BaseStorage<BlacklistedVideosData> & {
+export type typeExtensionStorage = BaseStorage<typeExtensionStorageData> & {
   updateInstructions: (instructions: string | null) => Promise<void>;
   addVideoToBlacklist: (videoId: string) => Promise<void>;
   updateVideoBlacklist: (newVideoIds: string[]) => Promise<void>;
@@ -38,11 +41,11 @@ export type BlacklistedVideosStorage = BaseStorage<BlacklistedVideosData> & {
   clearFilterList: () => Promise<void>;
 
   // New methods for handling the block or allow list type
-  setIsBlockList: (isBlockList: boolean) => Promise<void>;
-  getIsBlockList: () => Promise<boolean>;
+  setBlockList: (isBlockList: EnumExtensionStorageListMode) => Promise<void>;
+  getBlockList: () => Promise<EnumExtensionStorageListMode>;
 };
 
-export type VideoData = {
+export type typeExtensionVideoData = {
   videoId: string;
   title: string;
   thumbnail: string;
@@ -54,7 +57,7 @@ export type VideoData = {
   type: 'homepage' | 'sidebar' | 'search';
 };
 
-export interface BlockedVideoDetails {
+export interface IBlockedVideoDetails {
   videoId: string;
   title: string;
   channel: string;
@@ -68,15 +71,23 @@ export interface BlockedVideoDetails {
 export type BlockedVideosByTabData = {
   tabs: {
     [tabId: number]: {
-      detectedVideos: VideoData[];
-      blacklisted: BlockedVideoDetails[];
+      detectedVideos: typeExtensionVideoData[];
+      blacklisted: IBlockedVideoDetails[];
     };
   };
 };
 
 export type BlockedVideosByTabStorage = BaseStorage<BlockedVideosByTabData> & {
-  addVideoToTabBlacklist(tabId: number, detectedVideos: VideoData[], videoDetails: BlockedVideoDetails): Promise<void>;
-  updateTabBlacklist(tabId: number, detectedVideos: VideoData[], videoDetails: BlockedVideoDetails[]): Promise<void>;
+  addVideoToTabBlacklist(
+    tabId: number,
+    detectedVideos: typeExtensionVideoData[],
+    videoDetails: IBlockedVideoDetails,
+  ): Promise<void>;
+  updateTabBlacklist(
+    tabId: number,
+    detectedVideos: typeExtensionVideoData[],
+    videoDetails: IBlockedVideoDetails[],
+  ): Promise<void>;
   removeVideoFromTabBlacklist(tabId: number, videoId: string): Promise<void>;
   isVideoBlacklistedInTab(tabId: number, videoId: string): Promise<boolean>;
   clearTabBlacklist(tabId: number): Promise<void>;
