@@ -9,6 +9,10 @@ const storage = createStorage<typeExtensionStorageData>(
     instructions: null,
     filterList: [],
     listMode: EnumExtensionStorageListMode.BLOCK_LIST,
+    channelBlockList: [],
+    shotsAllow: false,
+    playlistAllow: false,
+    bannerAllow: false,
   },
   {
     storageEnum: StorageEnum.Local,
@@ -20,6 +24,30 @@ export const extensionStorage: typeExtensionStorage = {
   ...storage,
 
   ////// POPUP UIs -
+  updateChannelBlockList: async (list: string[]) => {
+    await storage.set(current => ({
+      ...current,
+      channelBlockList: list,
+    }));
+  },
+  updateShotsAllow: async (shotsAllow: boolean) => {
+    await storage.set(current => ({
+      ...current,
+      shotsAllow: shotsAllow,
+    }));
+  },
+  updatePlayListAllow: async (playlistAllow: boolean) => {
+    await storage.set(current => ({
+      ...current,
+      playlistAllow: playlistAllow,
+    }));
+  },
+  updateBannerAllow: async (bannerAllow: boolean) => {
+    await storage.set(current => ({
+      ...current,
+      bannerAllow: bannerAllow,
+    }));
+  },
 
   // To Update Instructions
   updateInstructions: async (instructions: null | string) => {

@@ -24,9 +24,17 @@ export type typeExtensionStorageData = {
   instructions: null | string;
   filterList: string[];
   listMode: EnumExtensionStorageListMode;
+  channelBlockList: string[];
+  shotsAllow: false | boolean;
+  playlistAllow: false | boolean;
+  bannerAllow: false | boolean;
 };
 
 export type typeExtensionStorage = BaseStorage<typeExtensionStorageData> & {
+  updateShotsAllow: (shotsAllow: boolean) => Promise<void>;
+  updatePlayListAllow: (playlistAllow: boolean) => Promise<void>;
+  updateBannerAllow: (bannerAllow: boolean) => Promise<void>;
+  updateChannelBlockList: (list: string[]) => Promise<void>;
   updateInstructions: (instructions: string | null) => Promise<void>;
   addVideoToBlacklist: (videoId: string) => Promise<void>;
   updateVideoBlacklist: (newVideoIds: string[]) => Promise<void>;

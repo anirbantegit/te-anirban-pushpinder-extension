@@ -9,6 +9,12 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
   const [contentFilter, setContentFilter] = useState<string>('');
   const [filterList, setFilterList] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState<string>(''); // For managing the input field
+  const [channelInput, setChannelInput] = useState<string>('');
+  const [blockedChannelList, setblockedChannelList] = useState<string[]>([]);
+  const [shotsBlock, setShotsBlock] = useState<boolean>(false);
+  const [playlistBlock, setPlaylistBlock] = useState<boolean>(false);
+  const [bannerBlock, setBannerBlock] = useState<boolean>(false);
+
   const [accordian, setAccordian] = useState<boolean>(true);
   const [activeMode, setActiveMode] = useState<EnumExtensionStorageListMode>(EnumExtensionStorageListMode.BLOCK_LIST);
 
@@ -22,13 +28,27 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
     setFilterList(filterList.filter(chip => chip !== chipToDelete));
   };
 
+  const handleAddChannel = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' && channelInput.trim()) {
+      setblockedChannelList([...blockedChannelList, channelInput.trim()]);
+      setChannelInput('');
+    }
+  };
+  const handleDeleteChannel = (chipToDelete: string) => {
+    setblockedChannelList(blockedChannelList.filter(chip => chip !== chipToDelete));
+  };
   useEffect(() => {
     const fetchInitialData = async () => {
-      const { instructions, listMode, filterList } = await extensionStorage.get();
-      console.log('AAA => ', { instructions, listMode, filterList });
+      const { instructions, listMode, filterList, channelBlockList, shotsAllow, playlistAllow, bannerAllow } =
+        await extensionStorage.get();
+      console.log('AAA => ', { instructions, listMode, filterList, shotsAllow, playlistAllow, bannerAllow });
       setContentFilter(instructions || '');
       setActiveMode(listMode);
       setFilterList(filterList);
+      setblockedChannelList(channelBlockList || []);
+      setShotsBlock(shotsAllow);
+      setPlaylistBlock(playlistAllow);
+      setBannerBlock(bannerAllow);
     };
 
     fetchInitialData();
@@ -42,6 +62,27 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
     })();
   }, [contentFilter, filterList]);
 
+  useEffect(() => {
+    (async () => {
+      await extensionStorage.updateChannelBlockList(blockedChannelList); // Persist the blockedChannel list
+    })();
+  }, [blockedChannelList]);
+
+  useEffect(() => {
+    (async () => {
+      await extensionStorage.updateShotsAllow(shotsBlock); // Persist the blockedChannel list
+    })();
+  }, [shotsBlock]);
+  useEffect(() => {
+    (async () => {
+      await extensionStorage.updatePlayListAllow(playlistBlock); // Persist the blockedChannel list
+    })();
+  }, [playlistBlock]);
+  useEffect(() => {
+    (async () => {
+      await extensionStorage.updateBannerAllow(bannerBlock); // Persist the blockedChannel list
+    })();
+  }, [bannerBlock]);
   const getButtonClass = (mode: EnumExtensionStorageListMode): string => {
     return activeMode === mode
       ? 'text-[#000] py-[5px] px-2 font-medium bg-[#0B82EF] text-[#fff] rounded-[5px]'
@@ -126,6 +167,9 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
         focus:outline-none focus:shadow-outline focus:border-[#0B82EF]"
               type="text"
               placeholder="Blocked Channels"
+              value={channelInput}
+              onChange={e => setChannelInput(e.target.value)}
+              onKeyDown={handleAddChannel}
             />
           </div>
         </div>
@@ -135,7 +179,7 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
         <div className="bg-white rounded-lg">
           <div className="px-3 pt-3 flex justify-between items-center gap-2">
             <div className="flex-auto">
-              <h4 className="text-sm font-medium">Block Listed Channels (3)</h4>
+              <h4 className="text-sm font-medium">Block Listed Channels ({blockedChannelList?.length})</h4>
             </div>
             <button
               type="button"
@@ -159,49 +203,53 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
             </button>
           </div>
           <div className="flex flex-col gap-y-1 pl-8 pr-[8px] pt-2 pb-3 overflow-x-hidden overflow-y-auto max-h-[120px]">
-            <div className="flex w-full">
-              <div className="flex flex-auto">
-                <div className="text-[13px] text-[#555] font-medium">Pedro Duarte</div>
-              </div>
-              <div className="flex flex-[0_0_auto]">
-                <CloseIcon style={{ color: '#999', fontSize: '18px' }} />
-              </div>
-            </div>
-            <div className="flex w-full">
-              <div className="flex flex-auto">
-                <div className="text-[13px] text-[#555] font-medium">Colm Tuite</div>
-              </div>
-              <div className="flex flex-[0_0_auto]">
-                <CloseIcon style={{ color: '#999', fontSize: '18px' }} />
-              </div>
-            </div>
-            <div className="flex w-full">
-              <div className="flex flex-auto">
-                <div className="text-[13px] text-[#555] font-medium">Pietro Schirano</div>
-              </div>
-              <div className="flex flex-[0_0_auto]">
-                <CloseIcon style={{ color: '#999', fontSize: '18px' }} />
-              </div>
-            </div>
+            {blockedChannelList?.length > 0 &&
+              blockedChannelList?.map((listing: any, index: any) => {
+                return (
+                  <div className="flex w-full" key={index}>
+                    <div className="flex flex-auto">
+                      <div className="text-[13px] text-[#555] font-medium">{listing}</div>
+                    </div>
+                    <div className="flex flex-[0_0_auto]" onClick={() => handleDeleteChannel(listing)}>
+                      <CloseIcon style={{ color: '#999', fontSize: '18px' }} />
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
       </div>
 
       <div className="flex items-center justify-between pt-0 mt-0">
         <div className="flex items-center">
-          <Switch color="primary" inputProps={{ 'aria-label': 'block allow switch' }} />
+          <Switch
+            color="primary"
+            checked={shotsBlock}
+            onChange={() => setShotsBlock(!shotsBlock)}
+            inputProps={{ 'aria-label': 'block allow switch' }}
+          />
           <Typography variant="subtitle2" className="ml-2">
-            {true ? 'Block Shorts' : 'Allow Shorts'}
+            {shotsBlock ? 'Block Shorts' : 'Allow Shorts'}
           </Typography>
         </div>
         <div className="flex items-center">
-          <Switch color="primary" inputProps={{ 'aria-label': 'block allow switch' }} />
+          <Switch
+            color="primary"
+            checked={playlistBlock}
+            onChange={() => setPlaylistBlock(!playlistBlock)}
+            inputProps={{ 'aria-label': 'block allow switch' }}
+          />
           <Typography variant="subtitle2" className="ml-2">
             Block Playlists
           </Typography>
         </div>
         <div className="flex items-center">
-          <Switch color="primary" inputProps={{ 'aria-label': 'block allow switch' }} />
+          <Switch
+            color="primary"
+            checked={bannerBlock}
+            onChange={() => setBannerBlock(!bannerBlock)}
+            inputProps={{ 'aria-label': 'block allow switch' }}
+          />
           <Typography variant="subtitle2" className="ml-2">
             Block Banners
           </Typography>
