@@ -1,6 +1,6 @@
 import type { typeExtensionVideoData } from '@extension/storage/lib';
 
-type ChangeCallback = (videos: typeExtensionVideoData[], url: string) => void;
+type ChangeCallback = (videos: typeExtensionVideoData[], url: string, shots: typeExtensionVideoData[]) => void;
 
 export class YouTubeChangeDetector {
   private observer!: MutationObserver;
@@ -41,6 +41,7 @@ export class YouTubeChangeDetector {
    */
   private observeDomChanges() {
     const contentArea = document.querySelector('ytd-app');
+
     if (contentArea) {
       this.observer.observe(contentArea, { childList: true, subtree: true });
     }
@@ -77,10 +78,18 @@ export class YouTubeChangeDetector {
    */
   private handleVideoChanges(newVideos: typeExtensionVideoData[]) {
     const newVideoIds = new Set(newVideos.map(video => video.videoId));
-
+    const newShots = this.queryShotVideos(
+      'ytd-rich-grid-slim-media',
+      'ytd-channel-name',
+      'yt-image',
+      'ytd-thumbnail',
+      'div#metadata-line',
+      'a.yt-simple-endpoint.style-scope.ytd-compact-video-renderer',
+      'sidebar',
+    );
     if (!this.areSetsEqual(this.previousVideoIds, newVideoIds)) {
       this.previousVideoIds = newVideoIds;
-      this.callback(newVideos, this.currentUrl);
+      this.callback(newVideos, this.currentUrl, newShots);
     }
   }
 
@@ -209,7 +218,71 @@ export class YouTubeChangeDetector {
       })
       .filter(item => item !== null) as typeExtensionVideoData[];
   }
+  private queryShotVideos(
+    containerSelector: string,
+    channelSelector: string,
+    playlistSelector: string,
+    thumbNailSelector: string | string[],
+    metadataSelector: string,
+    anchorSelector: string,
+    type: typeExtensionVideoData['type'],
+  ): typeExtensionVideoData[] {
+    const videoRenderers = document.querySelectorAll(containerSelector);
+    const videoIdRegex = /\/shots\?v=([a-zA-Z0-9_-]{11})/;
+    return Array.from(videoRenderers)
+      .map(renderer => {
+        const anchor = renderer.querySelector('a#thumbnail') as HTMLAnchorElement | null;
 
+        const href = anchor?.href ?? '';
+        const videoIdMatch = href.match(videoIdRegex);
+        let thumbnail = '';
+        const thumbnailSelectors = Array.isArray(thumbNailSelector) ? thumbNailSelector : [thumbNailSelector];
+
+        for (const selector of thumbnailSelectors) {
+          const thumbnailElement = renderer.querySelector(selector) as HTMLImageElement | null;
+          // console.log("thumbnailElement => ", thumbnailElement);
+          if (thumbnailElement) {
+            if (selector.endsWith('img') || selector.includes('img.')) {
+              thumbnail = thumbnailElement.src;
+            } else {
+              thumbnail = this.extractThumbnail(thumbnailElement);
+            }
+            break; // Stop at the first valid thumbnail found
+          }
+        }
+        const videoId = href;
+        const title = renderer.querySelector('span#video-title')?.textContent?.trim() || '';
+        const channel = this.extractChannelTitle(renderer.querySelector(channelSelector));
+        const channelId = this.extractChannelId(renderer.querySelector(channelSelector));
+        const views = this.extractViews(renderer.querySelector(metadataSelector));
+        const videoType = 'shots';
+
+        // console.log('renderer',            videoId,
+        //   title,
+        //   thumbnail,
+        //   videoType,
+        //   channel,
+        //   channelId,
+        //   views,
+        //   type)
+
+        const videoData: typeExtensionVideoData = {
+          videoId,
+          title,
+          thumbnail,
+          videoType,
+          channel,
+          channelId,
+          views,
+          referenceDom: renderer as HTMLElement,
+          type,
+        };
+
+        videoData.referenceDom.classList.add('detected-video');
+        return videoData;
+      })
+      .filter(item => item !== null) as typeExtensionVideoData[];
+  }
   /**
    * Extracts the title from an anchor element.
    */

@@ -101,27 +101,57 @@ export const Dashboard = () => {
                 </svg>
               </button>
             </div>
+            <h4 className="text-sm font-medium">Shots</h4>
             {accordian && (
               <div className="p-4">
                 <div className="flex flex-col space-y-3">
-                  {blockedVideos.map((video, index) => (
-                    <div key={`video-${index}`} className="border-b-[#f0f0f0] border-b border-solid">
-                      <div className="flex gap-[10px]">
-                        <div className="w-[90px] flex-[0_0_auto] h-[60px] flex items-center justify-center">
-                          <img
-                            src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
-                            alt={video.title}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-auto">
-                          <h4 className="text-sm font-medium">{video.title}</h4>
-                          <p className="text-xs">{video.channel}</p>
-                          <p className="text-xs text-gray-500">{new Date(video.detectedAt).toLocaleString()}</p>
+                  {blockedVideos
+                    ?.filter(it => it.videoType === 'shots')
+                    .map((video, index) => (
+                      <div key={`video-${index}`} className="border-b-[#f0f0f0] border-b border-solid">
+                        <div className="flex gap-[10px]">
+                          <div className="w-[90px] flex-[0_0_auto] h-[60px] flex items-center justify-center">
+                            <img
+                              src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
+                              alt={video.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-auto">
+                            <h4 className="text-sm font-medium">{video.title}</h4>
+                            <p className="text-xs">{video.channel}</p>
+                            <p className="text-xs text-gray-500">{new Date(video.detectedAt).toLocaleString()}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                </div>
+              </div>
+            )}
+            <h4 className="text-sm font-medium">Videos</h4>
+            {accordian && (
+              <div className="p-4">
+                <div className="flex flex-col space-y-3">
+                  {blockedVideos
+                    ?.filter(it => it.videoType === 'video' || 'playlist')
+                    .map((video, index) => (
+                      <div key={`video-${index}`} className="border-b-[#f0f0f0] border-b border-solid">
+                        <div className="flex gap-[10px]">
+                          <div className="w-[90px] flex-[0_0_auto] h-[60px] flex items-center justify-center">
+                            <img
+                              src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
+                              alt={video.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-auto">
+                            <h4 className="text-sm font-medium">{video.title}</h4>
+                            <p className="text-xs">{video.channel}</p>
+                            <p className="text-xs text-gray-500">{new Date(video.detectedAt).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
             )}

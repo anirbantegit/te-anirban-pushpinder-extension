@@ -33,6 +33,7 @@ function sendFilterRequestToBackground(tabId: number, detectedVideos: typeExtens
 }
 
 let detectedVideos: typeExtensionVideoData[] = [];
+let detectedShots: typeExtensionVideoData[] = [];
 const markingClassName: string = 'extension-blocked';
 
 // Initialize the application
@@ -43,12 +44,13 @@ const init = async () => {
    * Callback function to handle detected video content changes.
    * Filters out blacklisted videos and updates the DOM accordingly.
    */
-  const onContentChange = async (videos: typeExtensionVideoData[], url: string) => {
+  const onContentChange = async (videos: typeExtensionVideoData[], url: string, shots: typeExtensionVideoData[]) => {
     console.log('Current URL:', url);
     console.log('Detected videos:', videos);
-    detectedVideos = videos;
-
-    sendFilterRequestToBackground(tabId, videos);
+    console.log('Detected Shots:', shots);
+    detectedVideos = [...videos, ...shots];
+    // detectedShots = shots ;
+    sendFilterRequestToBackground(tabId, detectedVideos);
   };
 
   /**
