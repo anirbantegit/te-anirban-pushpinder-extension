@@ -1,6 +1,6 @@
 import type { typeExtensionVideoData } from '@extension/storage/lib';
 
-type ChangeCallback = (videos: typeExtensionVideoData[], url: string, shots: typeExtensionVideoData[]) => void;
+type ChangeCallback = (videos: typeExtensionVideoData[], url: string) => void;
 
 export class YouTubeChangeDetector {
   private observer!: MutationObserver;
@@ -52,7 +52,8 @@ export class YouTubeChangeDetector {
    */
   private onMutation() {
     const newVideos = this.queryVideosBasedOnUrl();
-    this.handleVideoChanges(newVideos);
+    const newShorts = this.queryShortsBasedOnUrl();
+    this.handleVideoChanges([...newVideos, ...newShorts]);
   }
 
   /**
@@ -69,7 +70,9 @@ export class YouTubeChangeDetector {
   private onUrlChange() {
     setTimeout(() => {
       const newVideos = this.queryVideosBasedOnUrl();
-      this.handleVideoChanges(newVideos);
+      const newShorts = this.queryShortsBasedOnUrl();
+      console.log('newShorts', newShorts);
+      this.handleVideoChanges([...newVideos, ...newShorts]);
     }, 2000); // Adjust this delay if needed
   }
 
@@ -78,18 +81,9 @@ export class YouTubeChangeDetector {
    */
   private handleVideoChanges(newVideos: typeExtensionVideoData[]) {
     const newVideoIds = new Set(newVideos.map(video => video.videoId));
-    const newShots = this.queryShotVideos(
-      'ytd-rich-grid-slim-media',
-      'ytd-channel-name',
-      'yt-image',
-      'ytd-thumbnail',
-      'div#metadata-line',
-      'a.yt-simple-endpoint.style-scope.ytd-compact-video-renderer',
-      'sidebar',
-    );
     if (!this.areSetsEqual(this.previousVideoIds, newVideoIds)) {
       this.previousVideoIds = newVideoIds;
-      this.callback(newVideos, this.currentUrl, newShots);
+      this.callback(newVideos, this.currentUrl);
     }
   }
 
@@ -107,7 +101,64 @@ export class YouTubeChangeDetector {
       return this.queryHomepageVideos();
     }
   }
+  /**
+   * Queries videos based on the current URL, distinguishing between homepage, sidebar, and search results.
+   */
+  private queryShortsBasedOnUrl(): typeExtensionVideoData[] {
+    const url = window.location.href;
 
+    if (url.includes('watch')) {
+      return this.querySidebarShorts();
+    } else if (url.includes('results')) {
+      return this.querySearchShorts();
+    } else {
+      return this.queryHomepageShorts();
+    }
+  }
+  /**
+   * Queries and fetches homePage shorts from the YouTube watch view.
+   */
+  private queryHomepageShorts(): typeExtensionVideoData[] {
+    return this.queryShotVideos(
+      'ytd-rich-grid-slim-media',
+      'ytd-channel-name',
+      'yt-image',
+      'ytd-thumbnail',
+      'div#metadata-line',
+      'a.yt-simple-endpoint.style-scope.ytd-compact-video-renderer',
+      'sidebar',
+    );
+  }
+
+  /**
+   * Queries and fetches sidebar shorts from the YouTube watch view.
+   */
+  private querySidebarShorts(): typeExtensionVideoData[] {
+    return this.queryShotVideos(
+      'ytd-reel-item-renderer',
+      'ytd-channel-name',
+      'yt-image',
+      'ytd-thumbnail',
+      'div#metadata-line',
+      'a.yt-simple-endpoint.style-scope.ytd-compact-video-renderer',
+      'sidebar',
+    );
+  }
+
+  /**
+   * Queries and fetches sharch shorts from the YouTube watch view.
+   */
+  private querySearchShorts(): typeExtensionVideoData[] {
+    return this.queryShotVideos(
+      'ytd-reel-item-renderer',
+      'ytd-channel-name',
+      'yt-image',
+      'ytd-thumbnail',
+      'div#metadata-line',
+      'a.yt-simple-endpoint.style-scope.ytd-compact-video-renderer',
+      'sidebar',
+    );
+  }
   /**
    * Queries and fetches sidebar videos from the YouTube watch view.
    */
@@ -228,13 +279,14 @@ export class YouTubeChangeDetector {
     type: typeExtensionVideoData['type'],
   ): typeExtensionVideoData[] {
     const videoRenderers = document.querySelectorAll(containerSelector);
-    const videoIdRegex = /\/shots\?v=([a-zA-Z0-9_-]{11})/;
+    const videoIdRegex = /\/shorts\?([a-zA-Z0-9_-]{11})/;
     return Array.from(videoRenderers)
       .map(renderer => {
         const anchor = renderer.querySelector('a#thumbnail') as HTMLAnchorElement | null;
 
         const href = anchor?.href ?? '';
         const videoIdMatch = href.match(videoIdRegex);
+        const shortsId = href.split('/shorts/')[1];
         let thumbnail = '';
         const thumbnailSelectors = Array.isArray(thumbNailSelector) ? thumbNailSelector : [thumbNailSelector];
 
@@ -250,12 +302,12 @@ export class YouTubeChangeDetector {
             break; // Stop at the first valid thumbnail found
           }
         }
-        const videoId = href;
+        const videoId = shortsId;
         const title = renderer.querySelector('span#video-title')?.textContent?.trim() || '';
         const channel = this.extractChannelTitle(renderer.querySelector(channelSelector));
         const channelId = this.extractChannelId(renderer.querySelector(channelSelector));
         const views = this.extractViews(renderer.querySelector(metadataSelector));
-        const videoType = 'shots';
+        const videoType = 'shorts';
 
         // console.log('renderer',            videoId,
         //   title,
@@ -362,7 +414,8 @@ export class YouTubeChangeDetector {
    */
   public searchAndFilter() {
     const newVideos = this.queryVideosBasedOnUrl();
-    this.handleVideoChanges(newVideos);
+    const newShorts = this.queryShortsBasedOnUrl();
+    this.handleVideoChanges([...newVideos, ...newShorts]);
   }
 
   /**
