@@ -53,7 +53,6 @@ export class YouTubeChangeDetector {
   private onMutation() {
     const newVideos = this.queryVideosBasedOnUrl();
     const newShorts = this.queryShortsBasedOnUrl();
-    console.log('newShorts => ', { newShorts, newVideos });
     this.handleVideoChanges([...newVideos, ...newShorts]);
   }
 
@@ -72,8 +71,6 @@ export class YouTubeChangeDetector {
     setTimeout(() => {
       const newVideos = this.queryVideosBasedOnUrl();
       const newShorts = this.queryShortsBasedOnUrl();
-      console.log('newShorts', newShorts);
-      console.log('newVideos', newVideos);
       this.handleVideoChanges([...newVideos, ...newShorts]);
     }, 2000); // Adjust this delay if needed
   }
@@ -230,7 +227,6 @@ export class YouTubeChangeDetector {
 
           for (const selector of thumbnailSelectors) {
             const thumbnailElement = renderer.querySelector(selector) as HTMLImageElement | null;
-            // console.log("thumbnailElement => ", {videoId, thumbnailElement});
             if (thumbnailElement) {
               if (selector.endsWith('img') || selector.includes('img.')) {
                 thumbnail = thumbnailElement.src;
@@ -239,6 +235,10 @@ export class YouTubeChangeDetector {
               }
               break; // Stop at the first valid thumbnail found
             }
+          }
+
+          if (!thumbnail) {
+            thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
           }
 
           const channel = this.extractChannelTitle(renderer.querySelector(channelSelector));
