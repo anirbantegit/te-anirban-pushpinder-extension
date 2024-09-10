@@ -53,6 +53,7 @@ export class YouTubeChangeDetector {
   private onMutation() {
     const newVideos = this.queryVideosBasedOnUrl();
     const newShorts = this.queryShortsBasedOnUrl();
+    console.log('newShorts => ', { newShorts, newVideos });
     this.handleVideoChanges([...newVideos, ...newShorts]);
   }
 
@@ -72,6 +73,7 @@ export class YouTubeChangeDetector {
       const newVideos = this.queryVideosBasedOnUrl();
       const newShorts = this.queryShortsBasedOnUrl();
       console.log('newShorts', newShorts);
+      console.log('newVideos', newVideos);
       this.handleVideoChanges([...newVideos, ...newShorts]);
     }, 2000); // Adjust this delay if needed
   }
@@ -119,45 +121,39 @@ export class YouTubeChangeDetector {
    * Queries and fetches homePage shorts from the YouTube watch view.
    */
   private queryHomepageShorts(): typeExtensionVideoData[] {
-    return this.queryShotVideos(
-      'ytd-rich-grid-slim-media',
-      'ytd-channel-name',
-      'yt-image',
-      'ytd-thumbnail',
-      'div#metadata-line',
-      'a.yt-simple-endpoint.style-scope.ytd-compact-video-renderer',
-      'sidebar',
-    );
+    return this.queryShorts({
+      containerSelector: 'ytd-rich-item-renderer',
+      anchorSelector: 'div.image-overlay-text h3 a',
+      titleSelector: '.image-overlay-text span[role="text"]',
+      channelSelector: 'ytd-channel-name',
+      type: 'homepage',
+    });
   }
 
   /**
    * Queries and fetches sidebar shorts from the YouTube watch view.
    */
   private querySidebarShorts(): typeExtensionVideoData[] {
-    return this.queryShotVideos(
-      'ytd-reel-item-renderer',
-      'ytd-channel-name',
-      'yt-image',
-      'ytd-thumbnail',
-      'div#metadata-line',
-      'a.yt-simple-endpoint.style-scope.ytd-compact-video-renderer',
-      'sidebar',
-    );
+    return this.queryShorts({
+      containerSelector: 'ytm-shorts-lockup-view-model-v2.ShortsLockupViewModelHost',
+      anchorSelector: 'a.reel-item-endpoint',
+      titleSelector: '.image-overlay-text h3 span[role="text"]',
+      channelSelector: 'ytd-channel-name',
+      type: 'sidebar',
+    });
   }
 
   /**
    * Queries and fetches sharch shorts from the YouTube watch view.
    */
   private querySearchShorts(): typeExtensionVideoData[] {
-    return this.queryShotVideos(
-      'ytd-reel-item-renderer',
-      'ytd-channel-name',
-      'yt-image',
-      'ytd-thumbnail',
-      'div#metadata-line',
-      'a.yt-simple-endpoint.style-scope.ytd-compact-video-renderer',
-      'sidebar',
-    );
+    return this.queryShorts({
+      containerSelector: 'ytm-shorts-lockup-view-model-v2.ShortsLockupViewModelHost',
+      anchorSelector: 'a.reel-item-endpoint',
+      titleSelector: '.image-overlay-text span[role="text"]',
+      channelSelector: 'ytd-channel-name',
+      type: 'search',
+    });
   }
   /**
    * Queries and fetches sidebar videos from the YouTube watch view.
@@ -269,69 +265,77 @@ export class YouTubeChangeDetector {
       })
       .filter(item => item !== null) as typeExtensionVideoData[];
   }
-  private queryShotVideos(
-    containerSelector: string,
-    channelSelector: string,
-    playlistSelector: string,
-    thumbNailSelector: string | string[],
-    metadataSelector: string,
-    anchorSelector: string,
-    type: typeExtensionVideoData['type'],
-  ): typeExtensionVideoData[] {
+
+  /**
+   * Generalized shorts query function that works for different YouTube sections.
+   */
+  private queryShorts(payload: {
+    containerSelector: string;
+    titleSelector: string;
+    channelSelector: string;
+    anchorSelector: string;
+    type: 'homepage' | 'sidebar' | 'search';
+  }): typeExtensionVideoData[] {
+    const { containerSelector, titleSelector, channelSelector, anchorSelector, type } = payload;
     const videoRenderers = document.querySelectorAll(containerSelector);
-    const videoIdRegex = /\/shorts\?([a-zA-Z0-9_-]{11})/;
+    const videoIdRegex = /\/shorts\/([a-zA-Z0-9_-]{11})/;
     return Array.from(videoRenderers)
       .map(renderer => {
-        const anchor = renderer.querySelector('a#thumbnail') as HTMLAnchorElement | null;
+        const domAnchor = renderer.querySelector(anchorSelector) as HTMLAnchorElement | null;
+        const domImageOverlayText = renderer.querySelector('.image-overlay-text');
 
-        const href = anchor?.href ?? '';
+        const href = domAnchor?.href ?? '';
         const videoIdMatch = href.match(videoIdRegex);
-        const shortsId = href.split('/shorts/')[1];
-        let thumbnail = '';
-        const thumbnailSelectors = Array.isArray(thumbNailSelector) ? thumbNailSelector : [thumbNailSelector];
 
-        for (const selector of thumbnailSelectors) {
-          const thumbnailElement = renderer.querySelector(selector) as HTMLImageElement | null;
-          // console.log("thumbnailElement => ", thumbnailElement);
-          if (thumbnailElement) {
-            if (selector.endsWith('img') || selector.includes('img.')) {
-              thumbnail = thumbnailElement.src;
-            } else {
-              thumbnail = this.extractThumbnail(thumbnailElement);
-            }
-            break; // Stop at the first valid thumbnail found
+        if (domAnchor && videoIdMatch) {
+          const videoId: string = videoIdMatch[1];
+
+          let title: string = '';
+          switch (type) {
+            case 'homepage':
+              title = domAnchor.querySelector(titleSelector)?.textContent?.trim() || '';
+              break;
+            case 'sidebar':
+              title = renderer.querySelector(titleSelector)?.textContent?.trim() || '';
+              break;
+            case 'search':
+              title = renderer.querySelector(titleSelector)?.textContent?.trim() || '';
+              break;
+          }
+          const channel = this.extractChannelTitle(renderer.querySelector(channelSelector)) ?? null;
+          const channelId = this.extractChannelId(renderer.querySelector(channelSelector)) ?? null;
+
+          const viewsXPath: string =
+            './/div[contains(@class, "ShortsLockupViewModelHostMetadataSubhead")]//span[@role="text"]';
+          const domViews = document.evaluate(
+            viewsXPath,
+            domImageOverlayText,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null,
+          ).singleNodeValue;
+          const views = domViews.textContent.replace(' views', '').trim() ?? '';
+          // const views = this.extractViews(renderer.querySelector(metadataSelector));
+          const videoType = 'shorts';
+
+          if (title) {
+            const videoData: typeExtensionVideoData = {
+              videoId,
+              title,
+              thumbnail: `https://i.ytimg.com/vi/${videoId}/oar2.jpg`,
+              videoType,
+              channel,
+              channelId,
+              views,
+              referenceDom: renderer as HTMLElement,
+              type,
+            };
+
+            videoData.referenceDom.classList.add('detected-video');
+            return videoData;
           }
         }
-        const videoId = shortsId;
-        const title = renderer.querySelector('span#video-title')?.textContent?.trim() || '';
-        const channel = this.extractChannelTitle(renderer.querySelector(channelSelector));
-        const channelId = this.extractChannelId(renderer.querySelector(channelSelector));
-        const views = this.extractViews(renderer.querySelector(metadataSelector));
-        const videoType = 'shorts';
-
-        // console.log('renderer',            videoId,
-        //   title,
-        //   thumbnail,
-        //   videoType,
-        //   channel,
-        //   channelId,
-        //   views,
-        //   type)
-
-        const videoData: typeExtensionVideoData = {
-          videoId,
-          title,
-          thumbnail,
-          videoType,
-          channel,
-          channelId,
-          views,
-          referenceDom: renderer as HTMLElement,
-          type,
-        };
-
-        videoData.referenceDom.classList.add('detected-video');
-        return videoData;
+        return null;
       })
       .filter(item => item !== null) as typeExtensionVideoData[];
   }

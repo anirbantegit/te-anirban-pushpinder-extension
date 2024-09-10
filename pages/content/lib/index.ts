@@ -108,10 +108,10 @@ const init = async () => {
    * Fetches the initial blacklist and initializes the YouTube change detector.
    */
 
-  extensionStorage.subscribe(async () => {
+  /*extensionStorage.subscribe(async () => {
     const data = await extensionStorage.getBlockList();
-    console.log('getBlockList => ', { data });
-  });
+    // console.log('getBlockList => ', { data });
+  });*/
 
   extensionStorage.get().then(data => {
     initializeDetector();
