@@ -46,7 +46,7 @@ const init = async () => {
   const onContentChange = async (videos: typeExtensionVideoData[], url: string) => {
     console.log('Current URL:', url);
     console.log('Detected videos:', videos);
-    // detectedShots = shots ;
+    detectedVideos = videos;
     sendFilterRequestToBackground(tabId, videos);
   };
 
