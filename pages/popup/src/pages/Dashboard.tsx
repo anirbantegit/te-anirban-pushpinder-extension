@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { PopupLayout } from '@src/components/layout/PopupLayout';
 import { VideoManager } from '@src/components/Dashboard/VideoManage';
-import type { IBlockedVideoDetails } from '@extension/storage/lib';
+import type { IBlockedVideoDetails, typeExtensionVideoData } from '@extension/storage/lib';
 import { blockedVideosByTabStorage, extensionStorage } from '@extension/storage';
 import { Chip, CircularProgress, Switch, TextField } from '@mui/material';
 import { UserEntries } from '@src/components/Dashboard/UserEntries';
@@ -21,6 +21,7 @@ const BlockedSection = memo(
   ({
     title,
     isProcessing,
+    isDetecting,
     blockedCount,
     detectedCount,
     videos,
@@ -29,6 +30,7 @@ const BlockedSection = memo(
   }: {
     title: string;
     isProcessing: boolean;
+    isDetecting: boolean;
     blockedCount: number;
     detectedCount: number;
     videos: IBlockedVideoDetails[];
@@ -84,7 +86,7 @@ BlockedSection.displayName = 'BlockedSection';
 export const Dashboard = () => {
   const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
   const [blockedVideos, setBlockedVideos] = useState<IBlockedVideoDetails[]>([]);
-  const [detectedVideos, setDetectedVideos] = useState<object[]>([]);
+  const [detectedVideos, setDetectedVideos] = useState<typeExtensionVideoData[]>([]);
   const [tabId, setTabId] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isDetecting, setIsDetecting] = useState<boolean>(false);

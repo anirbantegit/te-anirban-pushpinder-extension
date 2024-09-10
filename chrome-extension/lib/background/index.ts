@@ -1,6 +1,11 @@
 import 'webextension-polyfill';
-import type { typeExtensionVideoData, IBlockedVideoDetails } from '@extension/storage';
-import { blockedVideosByTabStorage, exampleThemeStorage, extensionStorage } from '@extension/storage';
+import type { IBlockedVideoDetails, typeExtensionVideoData } from '@extension/storage';
+import {
+  blockedVideosByTabStorage,
+  EnumExtensionStorageListMode,
+  exampleThemeStorage,
+  extensionStorage,
+} from '@extension/storage';
 import type { IAPIPayloadEither, IAPIResponse, IAPIVideoResponse, IPayloadVideo } from '@lib/background/types';
 
 // Log the current theme for debugging purposes
@@ -79,7 +84,7 @@ function handleFilterVideosForTab(
       const { signal } = abortControllers[tabId];
 
       // Fetch instructions, filter list, and block/allow list setting from storage
-      const { instructions, filterList, isBlockList } = await extensionStorage.get();
+      const { instructions, filterList, listMode } = await extensionStorage.get();
 
       // Initialize the payload with the detected videos
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -100,10 +105,13 @@ function handleFilterVideosForTab(
       const filters: string[] = filterList ?? [];
       if (instructions) filters.push(instructions);
 
-      if (isBlockList) {
-        payload.block_list = filters;
-      } else {
-        payload.allow_list = filters;
+      switch (listMode) {
+        case EnumExtensionStorageListMode.BLOCK_LIST:
+          payload.block_list = filters;
+          break;
+        case EnumExtensionStorageListMode.ALLOW_LIST:
+          payload.allow_list = filters;
+          break;
       }
 
       // Send the API request with the abort signal

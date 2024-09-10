@@ -310,12 +310,12 @@ export class YouTubeChangeDetector {
             './/div[contains(@class, "ShortsLockupViewModelHostMetadataSubhead")]//span[@role="text"]';
           const domViews = document.evaluate(
             viewsXPath,
-            domImageOverlayText,
+            domImageOverlayText as Node,
             null,
             XPathResult.FIRST_ORDERED_NODE_TYPE,
             null,
           ).singleNodeValue;
-          const views = domViews.textContent.replace(' views', '').trim() ?? '';
+          const views = domViews?.textContent?.replace(' views', '').trim() ?? '';
           // const views = this.extractViews(renderer.querySelector(metadataSelector));
           const videoType = 'shorts';
 
