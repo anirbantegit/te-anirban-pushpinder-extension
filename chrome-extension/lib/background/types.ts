@@ -4,9 +4,9 @@ export interface IPayloadVideo {
   timestamp: number;
   title: string;
   thumbnail_url: string;
-  channel_name: string;
-  channel_id: string;
-  channel_url: string;
+  channel_name: string | null;
+  channel_id: string | null;
+  channel_url: string | null;
 }
 
 export interface IAPIPayload {
@@ -23,8 +23,6 @@ export interface IAllowListPayload extends IAPIPayload {
   block_list?: never;
 }
 export type IAPIPayloadEither = IBlockListPayload | IAllowListPayload;
-
-
 
 //// API RESPONSE TYPES
 export interface IAPIVideoResponse {

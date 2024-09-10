@@ -72,6 +72,8 @@ function handleFilterVideosForTab(
   // Set up a new debounce timer
   debounceTimers[tabId] = setTimeout(async () => {
     try {
+      await blockedVideosByTabStorage.updateIsProcessing(tabId, true);
+
       // Create a new AbortController for the new request
       abortControllers[tabId] = new AbortController();
       const { signal } = abortControllers[tabId];
@@ -88,10 +90,10 @@ function handleFilterVideosForTab(
         uuid: detectedVideo.videoId,
         timestamp: Date.now(),
         title: detectedVideo.title,
-        thumbnail_url: `https://img.youtube.com/vi/${detectedVideo.videoId}/hqdefault.jpg`,
+        thumbnail_url: detectedVideo.thumbnail,
         channel_name: detectedVideo.channel,
         channel_id: detectedVideo.channelId,
-        channel_url: `https://youtube.com${detectedVideo.channelId}`,
+        channel_url: `https://youtube.com/@${detectedVideo.channelId}`,
       })) as IPayloadVideo[];
 
       // Prepare filters and assign them to the appropriate list
@@ -148,6 +150,7 @@ function handleFilterVideosForTab(
     } catch (error) {
       handleError(tabId, error as Error, sendResponse);
     } finally {
+      await blockedVideosByTabStorage.updateIsProcessing(tabId, false);
       // Cleanup the abort controller after the request is done
       cleanupAfterRequest(tabId);
     }

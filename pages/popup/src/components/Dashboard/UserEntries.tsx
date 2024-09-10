@@ -41,7 +41,6 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
     const fetchInitialData = async () => {
       const { instructions, listMode, filterList, channelBlockList, shotsAllow, playlistAllow, bannerAllow } =
         await extensionStorage.get();
-      console.log('AAA => ', { instructions, listMode, filterList, shotsAllow, playlistAllow, bannerAllow });
       setContentFilter(instructions || '');
       setActiveMode(listMode);
       setFilterList(filterList);

@@ -57,8 +57,8 @@ export type typeExtensionVideoData = {
   videoId: string;
   title: string;
   thumbnail: string;
-  channel: string;
-  channelId: string;
+  channel: string | null;
+  channelId: string | null;
   views: string;
   referenceDom: HTMLElement;
   videoType: string;
@@ -68,20 +68,24 @@ export type typeExtensionVideoData = {
 export interface IBlockedVideoDetails {
   videoId: string;
   title: string;
-  channel: string;
-  channelId: string;
+  channel: string | null;
+  channelId: string | null;
   thumbnail: string;
   videoType: string;
   detectedAt: string; // ISO timestamp when the video was detected and blocked
 }
 
+export type BlockedVideosTabData = {
+  isDetecting: boolean;
+  isProcessing: boolean;
+  detectedVideos: typeExtensionVideoData[];
+  blacklisted: IBlockedVideoDetails[];
+};
+
 // Types for blocked videos by tab
 export type BlockedVideosByTabData = {
   tabs: {
-    [tabId: number]: {
-      detectedVideos: typeExtensionVideoData[];
-      blacklisted: IBlockedVideoDetails[];
-    };
+    [tabId: number]: BlockedVideosTabData;
   };
 };
 
@@ -96,6 +100,8 @@ export type BlockedVideosByTabStorage = BaseStorage<BlockedVideosByTabData> & {
     detectedVideos: typeExtensionVideoData[],
     videoDetails: IBlockedVideoDetails[],
   ): Promise<void>;
+  updateIsDetecting(tabId: number, isDetecting: boolean): Promise<void>;
+  updateIsProcessing(tabId: number, isProcessing: boolean): Promise<void>;
   removeVideoFromTabBlacklist(tabId: number, videoId: string): Promise<void>;
   isVideoBlacklistedInTab(tabId: number, videoId: string): Promise<boolean>;
   clearTabBlacklist(tabId: number): Promise<void>;

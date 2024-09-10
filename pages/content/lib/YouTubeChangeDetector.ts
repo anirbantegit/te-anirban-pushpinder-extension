@@ -241,8 +241,9 @@ export class YouTubeChangeDetector {
             thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
           }
 
-          const channel = this.extractChannelTitle(renderer.querySelector(channelSelector));
-          const channelId = this.extractChannelId(renderer.querySelector(channelSelector));
+          const channel = this.extractChannelTitle(renderer.querySelector(channelSelector)).trim() || null;
+          const channelId =
+            this.extractChannelId(renderer.querySelector(channelSelector))?.replace(/^\/@/, '').trim() || null;
           const views = this.extractViews(renderer.querySelector(metadataSelector));
           const videoType = this.isPlaylist(renderer.querySelector(playlistSelector)) ? 'playlist' : 'video';
 

@@ -5,6 +5,7 @@ import type {
   BlockedVideosByTabData,
   IBlockedVideoDetails,
   typeExtensionVideoData,
+  BlockedVideosTabData,
 } from './types';
 
 const storage = createStorage<BlockedVideosByTabData>(
@@ -30,13 +31,19 @@ export const blockedVideosByTabStorage: BlockedVideosByTabStorage = {
   ) => {
     await storage.set(current => {
       const tabs = current.tabs || {}; // Ensure tabs is defined
-      const existingTabData = tabs[tabId] || { detectedVideos: [], blacklisted: [] };
+      const existingTabData: BlockedVideosTabData = tabs[tabId] || {
+        detectedVideos: [],
+        blacklisted: [],
+        isDetecting: false,
+        isProcessing: false,
+      };
 
       return {
         ...current,
         tabs: {
           ...tabs,
           [tabId]: {
+            ...existingTabData,
             detectedVideos: detectedVideos,
             blacklisted: [...existingTabData.blacklisted, videoDetails],
           },
@@ -53,14 +60,69 @@ export const blockedVideosByTabStorage: BlockedVideosByTabStorage = {
   ) => {
     await storage.set(current => {
       const tabs = current.tabs || {}; // Ensure tabs is defined
+      const existingTabData: BlockedVideosTabData = tabs[tabId] || {
+        detectedVideos: [],
+        blacklisted: [],
+        isDetecting: false,
+        isProcessing: false,
+      };
 
       return {
         ...current,
         tabs: {
           ...tabs,
           [tabId]: {
+            ...existingTabData,
             detectedVideos: detectedVideos, // Update detected videos as well
             blacklisted: newBlacklist, // Replace with the new blacklist
+          },
+        },
+      };
+    });
+  },
+
+  // Update whether detecting videos or not
+  updateIsDetecting: async (tabId: number, isDetecting: boolean) => {
+    await storage.set(current => {
+      const tabs = current.tabs || {}; // Ensure tabs is defined
+      const existingTabData: BlockedVideosTabData = tabs[tabId] || {
+        detectedVideos: [],
+        blacklisted: [],
+        isDetecting: false,
+        isProcessing: false,
+      };
+
+      return {
+        ...current,
+        tabs: {
+          ...tabs,
+          [tabId]: {
+            ...existingTabData,
+            isDetecting,
+          },
+        },
+      };
+    });
+  },
+
+  // Update whether processing videos or not
+  updateIsProcessing: async (tabId: number, isProcessing: boolean) => {
+    await storage.set(current => {
+      const tabs = current.tabs || {}; // Ensure tabs is defined
+      const existingTabData: BlockedVideosTabData = tabs[tabId] || {
+        detectedVideos: [],
+        blacklisted: [],
+        isDetecting: false,
+        isProcessing: false,
+      };
+
+      return {
+        ...current,
+        tabs: {
+          ...tabs,
+          [tabId]: {
+            ...existingTabData,
+            isProcessing,
           },
         },
       };
