@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Chip, Switch, TextField, Typography } from '@mui/material';
+import { Card, CardContent, Chip, CircularProgress, Switch, TextField, Typography } from '@mui/material';
 import { extensionStorage, EnumExtensionStorageListMode } from '@extension/storage';
 import CloseIcon from '@mui/icons-material/Close';
 
@@ -176,22 +176,29 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
 
       <div className="w-full">
         <div className="bg-white rounded-lg">
-          <div className="px-3 pt-3 flex justify-between items-center gap-2">
-            <div className="flex-auto">
+          <div
+            className={
+              accordian
+                ? 'p-4 flex justify-between items-center gap-2 border-b-[#f0f0f0] border-b border-solid'
+                : 'p-4 flex justify-between items-center gap-2'
+            }>
+            <div className="flex-auto flex items-center">
               <h4 className="text-sm font-medium">Block Listed Channels ({blockedChannelList?.length})</h4>
             </div>
+
             <button
               type="button"
               className="flex-[0_0_auto]"
-              //        onClick={() => setAccordian(!accordian)}
-            >
+              onClick={() => setAccordian(blockedChannelList?.length ? !accordian : false)}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width={12}
                 height={12}
                 fill="currentColor"
                 className={
-                  accordian ? 'bi bi-chevron-down transition-[0.5s] rotate-180' : 'bi bi-chevron-down transition-[0.5s]'
+                  (blockedChannelList?.length ? accordian : false)
+                    ? 'bi bi-chevron-down transition-[0.5s] rotate-180'
+                    : 'bi bi-chevron-down transition-[0.5s]'
                 }
                 viewBox="0 0 16 16">
                 <path
@@ -201,21 +208,23 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
               </svg>
             </button>
           </div>
-          <div className="flex flex-col gap-y-1 pl-8 pr-[8px] pt-2 pb-3 overflow-x-hidden overflow-y-auto max-h-[120px]">
-            {blockedChannelList?.length > 0 &&
-              blockedChannelList?.map((listing: any, index: any) => {
-                return (
-                  <div className="flex w-full" key={index}>
-                    <div className="flex flex-auto">
-                      <div className="text-[13px] text-[#555] font-medium">{listing}</div>
+          {(blockedChannelList?.length ? accordian : false) && (
+            <div className="flex flex-col gap-y-1 pl-8 pr-[8px] pt-2 pb-3 overflow-x-hidden overflow-y-auto max-h-[120px]">
+              {blockedChannelList?.length > 0 &&
+                blockedChannelList?.map((listing: any, index: any) => {
+                  return (
+                    <div className="flex w-full" key={index}>
+                      <div className="flex flex-auto">
+                        <div className="text-[13px] text-[#555] font-medium">{listing}</div>
+                      </div>
+                      <div className="flex flex-[0_0_auto]" onClick={() => handleDeleteChannel(listing)}>
+                        <CloseIcon style={{ color: '#999', fontSize: '18px' }} />
+                      </div>
                     </div>
-                    <div className="flex flex-[0_0_auto]" onClick={() => handleDeleteChannel(listing)}>
-                      <CloseIcon style={{ color: '#999', fontSize: '18px' }} />
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
       </div>
 

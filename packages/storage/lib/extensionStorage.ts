@@ -24,6 +24,10 @@ export const extensionStorage: typeExtensionStorage = {
   ...storage,
 
   ////// POPUP UIs -
+  getChannelBlockList: async (): Promise<string[]> => {
+    const storageData: typeExtensionStorageData = await storage.get();
+    return storageData.channelBlockList;
+  },
   updateChannelBlockList: async (list: string[]) => {
     await storage.set(current => ({
       ...current,

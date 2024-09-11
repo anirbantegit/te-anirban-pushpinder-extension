@@ -1,6 +1,6 @@
 import { YouTubeChangeDetector } from './YouTubeChangeDetector';
-import type { IBlockedVideoDetails, typeExtensionVideoData } from '@extension/storage/lib';
-import { extensionStorage, blockedVideosByTabStorage } from '@extension/storage/lib';
+import type { IBlockedVideoDetails, typeExtensionStorageData, typeExtensionVideoData } from '@extension/storage/lib';
+import { blockedVideosByTabStorage, extensionStorage } from '@extension/storage/lib';
 
 // Helper function to get the current tab ID
 const getCurrentTabId = async (): Promise<number> => {
@@ -33,6 +33,7 @@ function sendFilterRequestToBackground(tabId: number, detectedVideos: typeExtens
 }
 
 let detectedVideos: typeExtensionVideoData[] = [];
+let extensionStorageData: typeExtensionStorageData | null = null;
 const markingClassName: string = 'extension-blocked';
 
 // Initialize the application
@@ -51,23 +52,62 @@ const init = async () => {
   };
 
   /**
-   * Filter detected videos by received blacklisted suggestions
+   * Filters detected videos by received blacklisted suggestions and channel blacklist.
+   * @param blacklistedVideos - List of blacklisted video details from API.
+   * @returns Filtered list of detected videos that are blacklisted by API or channel.
    */
-  const filterDetectedVideosByReceivedBlacklistedSuggestions = (blacklistedVideos: IBlockedVideoDetails[]) => {
-    return detectedVideos.filter(video =>
-      blacklistedVideos.some(blacklistedVideo => blacklistedVideo.videoId === video.videoId),
-    );
+  const filterDetectedVideosWithReceivedArgs = (blacklistedVideos: IBlockedVideoDetails[]): DetectedVideo[] => {
+    const channelBlacklist = extensionStorageData?.channelBlockList || [];
+
+    return detectedVideos.filter(video => {
+      const isVideoBlacklistedByAPI = isVideoInBlacklist(blacklistedVideos, video.videoId);
+      const isVideoBlacklistedByChannel = isChannelBlacklisted(video, channelBlacklist);
+
+      return isVideoBlacklistedByAPI || isVideoBlacklistedByChannel;
+    });
+  };
+
+  /**
+   * Checks if a video is present in the blacklisted videos from API.
+   * @param blacklistedVideos - List of blacklisted video details.
+   * @param videoId - Video ID to check in blacklist.
+   * @returns Boolean indicating if the video is blacklisted by API.
+   */
+  const isVideoInBlacklist = (blacklistedVideos: IBlockedVideoDetails[], videoId: string): boolean => {
+    return blacklistedVideos.some(blacklistedVideo => blacklistedVideo.videoId === videoId);
+  };
+
+  /**
+   * Checks if a video's channel is in the user's channel blacklist.
+   * @param video - Video object containing channel information.
+   * @param channelBlacklist - List of blacklisted channel IDs or names.
+   * @returns Boolean indicating if the video is blacklisted by channel.
+   */
+  const isChannelBlacklisted = (video: typeExtensionVideoData, channelBlacklist: string[]): boolean => {
+    if (!video) return false;
+
+    const { channelId, channel } = video;
+    console.log('XXX => ', { channelId, channel });
+    const isChannelIdBlacklisted = !!(channelId && channelBlacklist.includes(channelId));
+    const isChannelNameBlacklisted = !!(channel && channelBlacklist.includes(channel));
+
+    return isChannelIdBlacklisted || isChannelNameBlacklisted;
+  };
+
+  /**
+   * Clear all DOM elements classes.
+   */
+  const clearAllPreviousDomClasses = () => {
+    const elementsWithBlockedClass = document.querySelectorAll(`.${markingClassName}`);
+    elementsWithBlockedClass.forEach(element => {
+      element.classList.remove(`${markingClassName}`);
+    });
   };
 
   /**
    * Updates DOM elements based on blacklist status.
    */
   const updateDomClasses = (blacklistedVideos: typeExtensionVideoData[]) => {
-    const elementsWithBlockedClass = document.querySelectorAll(`.${markingClassName}`);
-    elementsWithBlockedClass.forEach(element => {
-      element.classList.remove(`${markingClassName}`);
-    });
-
     blacklistedVideos.forEach(video => {
       if (!video.referenceDom.classList.contains(`${markingClassName}`)) {
         video.referenceDom.classList.add(`${markingClassName}`);
@@ -89,11 +129,13 @@ const init = async () => {
   const subscribeToBlacklistUpdates = () => {
     return blockedVideosByTabStorage.subscribe(() => {
       blockedVideosByTabStorage.get().then(async data => {
-        const { blacklisted } = data.tabs[tabId] ?? null;
+        const { blacklisted } = data.tabs[tabId] ?? { blacklisted: [] };
 
         // Separate videos into blacklisted and non-blacklisted
-        const detectedBlacklistedVideos: typeExtensionVideoData[] =
-          filterDetectedVideosByReceivedBlacklistedSuggestions(blacklisted);
+        const detectedBlacklistedVideos: typeExtensionVideoData[] = filterDetectedVideosWithReceivedArgs(blacklisted);
+
+        // Clear all previous classes
+        clearAllPreviousDomClasses();
 
         // Update DOM classes based on blacklist status
         updateDomClasses(detectedBlacklistedVideos);
@@ -108,12 +150,12 @@ const init = async () => {
    * Fetches the initial blacklist and initializes the YouTube change detector.
    */
 
-  /*extensionStorage.subscribe(async () => {
-    const data = await extensionStorage.getBlockList();
-    // console.log('getBlockList => ', { data });
-  });*/
+  extensionStorage.subscribe(async () => {
+    extensionStorageData = await extensionStorage.get();
+  });
 
   extensionStorage.get().then(data => {
+    extensionStorageData = data;
     initializeDetector();
   });
   const unsubscribe = subscribeToBlacklistUpdates();

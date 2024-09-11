@@ -68,7 +68,7 @@ const BlockedSection = memo(
             </svg>
           </button>
         </div>
-        {accordian && (
+        {!isProcessing && accordian && (
           <div className="p-4">
             <div className="flex flex-col space-y-3">
               {videos.map((video, index) => (

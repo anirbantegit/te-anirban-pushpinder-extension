@@ -9,6 +9,7 @@ import type {
   typeExtensionVideoData,
   typeExtensionStorage,
   BlockedVideosTabData,
+  typeExtensionStorageData,
 } from './types';
 
 export {
@@ -20,4 +21,11 @@ export {
   SessionAccessLevelEnum,
   EnumExtensionStorageListMode,
 };
-export type { BaseStorage, IBlockedVideoDetails, typeExtensionVideoData, typeExtensionStorage, BlockedVideosTabData };
+export type {
+  BaseStorage,
+  IBlockedVideoDetails,
+  typeExtensionVideoData,
+  typeExtensionStorage,
+  BlockedVideosTabData,
+  typeExtensionStorageData,
+};

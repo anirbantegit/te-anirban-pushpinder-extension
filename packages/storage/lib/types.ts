@@ -31,6 +31,7 @@ export type typeExtensionStorageData = {
 };
 
 export type typeExtensionStorage = BaseStorage<typeExtensionStorageData> & {
+  getChannelBlockList: () => Promise<string[]>;
   updateShotsAllow: (shotsAllow: boolean) => Promise<void>;
   updatePlayListAllow: (playlistAllow: boolean) => Promise<void>;
   updateBannerAllow: (bannerAllow: boolean) => Promise<void>;
