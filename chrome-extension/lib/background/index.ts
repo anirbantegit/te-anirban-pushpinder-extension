@@ -67,6 +67,7 @@ function handleFilterVideosForTab(
     sendResponse({ status: 'error', error: 'No valid videos detected' });
     return;
   }
+  console.log('REQUEST => ', { tabId, detectedVideos });
 
   // Clear the previous debounce timer if it exists
   clearDebounceTimer(tabId);
@@ -95,8 +96,8 @@ function handleFilterVideosForTab(
         const payload: IAPIPayloadEither = {};
 
         payload.videos = detectedVideos.map<IPayloadVideo>(detectedVideo => ({
-          uuid: detectedVideo.videoId,
-          timestamp: Date.now(),
+          video_id: detectedVideo.videoId,
+          timestamp: Math.floor(Date.now() / 1000),
           title: detectedVideo.title,
           thumbnail_url: detectedVideo.thumbnail,
           channel_name: detectedVideo.channel,
@@ -117,6 +118,8 @@ function handleFilterVideosForTab(
             break;
         }
 
+        console.log('payload => ', { payload });
+
         // Send the API request with the abort signal
         const response = await fetch('http://50.54.221.95:12731/filterVideos', {
           method: 'POST',
@@ -133,11 +136,17 @@ function handleFilterVideosForTab(
           return;
         }
 
-        const data = (await response.json()) as IAPIResponse;
+        const data = await response.json();
+
+        // Check if data is an array before filtering
+        if (!Array.isArray(data)) {
+          sendResponse({ status: 'error', error: 'Invalid response data format' });
+          return;
+        }
 
         const blockedVideoIds: string[] = data
           .filter((datum: IAPIVideoResponse) => datum.blocked)
-          .map(datum => datum.uuid);
+          .map(datum => datum.video_id);
 
         const blacklistedDetectedVideos: IBlockedVideoDetails[] = detectedVideos
           .filter(detectedVideo => blockedVideoIds.some(id => detectedVideo.videoId === id))

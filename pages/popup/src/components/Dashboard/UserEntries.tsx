@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, Chip, CircularProgress, Switch, TextField, Typography } from '@mui/material';
-import { extensionStorage, EnumExtensionStorageListMode } from '@extension/storage';
+import { extensionStorage, EnumExtensionStorageListMode, typeExtensionStorageData } from '@extension/storage';
 import CloseIcon from '@mui/icons-material/Close';
 
 interface UserEntriesProps {}
@@ -11,8 +11,8 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
   const [inputValue, setInputValue] = useState<string>(''); // For managing the input field
   const [channelInput, setChannelInput] = useState<string>('');
   const [blockedChannelList, setblockedChannelList] = useState<string[]>([]);
-  const [shotsBlock, setShotsBlock] = useState<boolean>(false);
-  const [playlistBlock, setPlaylistBlock] = useState<boolean>(false);
+  const [shortsSwitchFeed, setShortsSwitchFeed] = useState<boolean>(false);
+  const [playlistSwitchFeed, setPlaylistSwitchFeed] = useState<boolean>(false);
   const [bannerBlock, setBannerBlock] = useState<boolean>(false);
 
   const [accordian, setAccordian] = useState<boolean>(true);
@@ -39,14 +39,18 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
   };
   useEffect(() => {
     const fetchInitialData = async () => {
-      const { instructions, listMode, filterList, channelBlockList, shotsAllow, playlistAllow, bannerAllow } =
-        await extensionStorage.get();
+      const extensionData: typeExtensionStorageData = await extensionStorage.get();
+      const { instructions, listMode, filterList, channelBlockList, shortsAllow, playlistAllow, bannerAllow } =
+        extensionData;
+
+      console.log('extensionData => ', extensionData);
+
       setContentFilter(instructions || '');
       setActiveMode(listMode);
       setFilterList(filterList);
       setblockedChannelList(channelBlockList || []);
-      setShotsBlock(shotsAllow);
-      setPlaylistBlock(playlistAllow);
+      setShortsSwitchFeed(!shortsAllow);
+      setPlaylistSwitchFeed(!playlistAllow);
       setBannerBlock(bannerAllow);
     };
 
@@ -69,14 +73,14 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
 
   useEffect(() => {
     (async () => {
-      await extensionStorage.updateShotsAllow(shotsBlock); // Persist the blockedChannel list
+      await extensionStorage.updateShortsAllow(shortsSwitchFeed); // Persist the blockedChannel list
     })();
-  }, [shotsBlock]);
+  }, [shortsSwitchFeed]);
   useEffect(() => {
     (async () => {
-      await extensionStorage.updatePlayListAllow(playlistBlock); // Persist the blockedChannel list
+      await extensionStorage.updatePlayListAllow(playlistSwitchFeed); // Persist the blockedChannel list
     })();
-  }, [playlistBlock]);
+  }, [playlistSwitchFeed]);
   useEffect(() => {
     (async () => {
       await extensionStorage.updateBannerAllow(bannerBlock); // Persist the blockedChannel list
@@ -89,9 +93,7 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
   };
 
   useEffect(() => {
-    console.log('Mode => ', activeMode);
     (async () => {
-      console.log('Mode => ', activeMode);
       await extensionStorage.setBlockList(activeMode);
     })();
   }, [activeMode]);
@@ -232,19 +234,19 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
         <div className="flex items-center">
           <Switch
             color="primary"
-            checked={shotsBlock}
-            onChange={() => setShotsBlock(!shotsBlock)}
+            checked={shortsSwitchFeed ?? false}
+            onChange={() => setShortsSwitchFeed(shortsSwitchFeed => !shortsSwitchFeed)}
             inputProps={{ 'aria-label': 'block allow switch' }}
           />
           <Typography variant="subtitle2" className="ml-2">
-            {shotsBlock ? 'Block Shorts' : 'Allow Shorts'}
+            {shortsSwitchFeed ? 'Block Shorts' : 'Allow Shorts'}
           </Typography>
         </div>
         <div className="flex items-center">
           <Switch
             color="primary"
-            checked={playlistBlock}
-            onChange={() => setPlaylistBlock(!playlistBlock)}
+            checked={playlistSwitchFeed ?? false}
+            onChange={() => setPlaylistSwitchFeed(!playlistSwitchFeed)}
             inputProps={{ 'aria-label': 'block allow switch' }}
           />
           <Typography variant="subtitle2" className="ml-2">
@@ -254,7 +256,7 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
         <div className="flex items-center">
           <Switch
             color="primary"
-            checked={bannerBlock}
+            checked={bannerBlock ?? false}
             onChange={() => setBannerBlock(!bannerBlock)}
             inputProps={{ 'aria-label': 'block allow switch' }}
           />

@@ -25,15 +25,15 @@ export type typeExtensionStorageData = {
   filterList: string[];
   listMode: EnumExtensionStorageListMode;
   channelBlockList: string[];
-  shotsAllow: false | boolean;
+  shortsAllow: false | boolean;
   playlistAllow: false | boolean;
   bannerAllow: false | boolean;
 };
 
 export type typeExtensionStorage = BaseStorage<typeExtensionStorageData> & {
   getChannelBlockList: () => Promise<string[]>;
-  updateShotsAllow: (shotsAllow: boolean) => Promise<void>;
-  updatePlayListAllow: (playlistAllow: boolean) => Promise<void>;
+  updateShortsAllow: (switchFeed: boolean) => Promise<void>;
+  updatePlayListAllow: (switchFeed: boolean) => Promise<void>;
   updateBannerAllow: (bannerAllow: boolean) => Promise<void>;
   updateChannelBlockList: (list: string[]) => Promise<void>;
   updateInstructions: (instructions: string | null) => Promise<void>;

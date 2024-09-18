@@ -10,7 +10,7 @@ const storage = createStorage<typeExtensionStorageData>(
     filterList: [],
     listMode: EnumExtensionStorageListMode.BLOCK_LIST,
     channelBlockList: [],
-    shotsAllow: false,
+    shortsAllow: false,
     playlistAllow: false,
     bannerAllow: false,
   },
@@ -29,21 +29,22 @@ export const extensionStorage: typeExtensionStorage = {
     return storageData.channelBlockList;
   },
   updateChannelBlockList: async (list: string[]) => {
+    const uniqueList = Array.from(new Set(list)); // Remove duplicates
     await storage.set(current => ({
       ...current,
-      channelBlockList: list,
+      channelBlockList: uniqueList,
     }));
   },
-  updateShotsAllow: async (shotsAllow: boolean) => {
+  updateShortsAllow: async (switchFeed: boolean) => {
     await storage.set(current => ({
       ...current,
-      shotsAllow: shotsAllow,
+      shortsAllow: !switchFeed,
     }));
   },
-  updatePlayListAllow: async (playlistAllow: boolean) => {
+  updatePlayListAllow: async (switchFeed: boolean) => {
     await storage.set(current => ({
       ...current,
-      playlistAllow: playlistAllow,
+      playlistAllow: !switchFeed,
     }));
   },
   updateBannerAllow: async (bannerAllow: boolean) => {

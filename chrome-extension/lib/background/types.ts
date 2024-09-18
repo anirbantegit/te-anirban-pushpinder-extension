@@ -1,6 +1,6 @@
 //// API REQUEST TYPES
 export interface IPayloadVideo {
-  uuid: string;
+  video_id: string;
   timestamp: number;
   title: string;
   thumbnail_url: string;

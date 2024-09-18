@@ -14,151 +14,108 @@ const getCurrentTabId = async (): Promise<number> => {
     });
   });
 };
+
+// Sends a message to the background script to filter videos
 function sendFilterRequestToBackground(tabId: number, detectedVideos: typeExtensionVideoData[]) {
-  // Send a message to the background script to filter videos
-  chrome.runtime.sendMessage(
-    {
-      action: 'filterVideosForTab',
-      tabId,
-      detectedVideos,
-    },
-    response => {
-      if (response.error) {
-        console.error('Failed to filter videos:', response.error);
-      } else {
-        console.log('Filtered videos data:', response.data);
-      }
-    },
-  );
+  if (!detectedVideos || detectedVideos.length === 0) return;
+
+  chrome.runtime.sendMessage({ action: 'filterVideosForTab', tabId, detectedVideos }, response => {
+    if (response.error) {
+      console.error('Failed to filter videos:', response.error);
+    } else {
+      console.log('Filtered videos data:', response.data);
+    }
+  });
 }
 
-let detectedVideos: typeExtensionVideoData[] = [];
-let extensionStorageData: typeExtensionStorageData | null = null;
-const markingClassName: string = 'extension-blocked';
+// Video Filtering Logic
+const VideoFilter = {
+  isShortsAllowed: (storageData: typeExtensionStorageData): boolean => storageData?.shortsAllow ?? false,
+  isPlaylistAllowed: (storageData: typeExtensionStorageData): boolean => storageData?.playlistAllow ?? false,
 
-// Initialize the application
+  filterByType: (videos: typeExtensionVideoData[], storageData: typeExtensionStorageData): typeExtensionVideoData[] => {
+    return videos.filter(vid => {
+      if (VideoFilter.isShortsAllowed(storageData) && vid.videoType === 'shorts') return false;
+      if (VideoFilter.isPlaylistAllowed(storageData) && vid.videoType === 'playlist') return false;
+      return true;
+    });
+  },
+
+  filterByBlacklist: (
+    allDetectedVideos: typeExtensionVideoData[],
+    blacklistedVideos: IBlockedVideoDetails[],
+    storageData: typeExtensionStorageData,
+  ): typeExtensionVideoData[] => {
+    const channelBlacklist = storageData?.channelBlockList || [];
+    return allDetectedVideos.filter(video => {
+      return (
+        blacklistedVideos.some(bv => bv.videoId === video.videoId) ||
+        (video.channelId && channelBlacklist.includes(video.channelId)) ||
+        (video.channel && channelBlacklist.includes(video.channel))
+      );
+    });
+  },
+};
+
+// DOM Manipulation Logic
+const DOMUpdater = {
+  markingClassName: 'extension-blocked',
+
+  clearBlockedClasses: () => {
+    document
+      .querySelectorAll(`.${DOMUpdater.markingClassName}`)
+      .forEach(el => el.classList.remove(DOMUpdater.markingClassName));
+  },
+
+  updateBlockedClasses: (videos: typeExtensionVideoData[]) => {
+    videos.forEach(video => video.referenceDom.classList.add(DOMUpdater.markingClassName));
+  },
+};
+
+// Initialize the extension
 const init = async () => {
-  const tabId: number = await getCurrentTabId();
+  let allDetectedVideos: typeExtensionVideoData[] = [];
+  const tabId = await getCurrentTabId();
+  let extensionStorageData: typeExtensionStorageData | null = await extensionStorage.get();
 
-  /**
-   * Callback function to handle detected video content changes.
-   * Filters out blacklisted videos and updates the DOM accordingly.
-   */
-  const onContentChange = async (videos: typeExtensionVideoData[], url: string) => {
-    console.log('Current URL:', url);
-    console.log('Detected videos:', videos);
-    detectedVideos = videos;
-    sendFilterRequestToBackground(tabId, videos);
+  const handleOnClickAddToBlocklist = async (clickedVideo: typeExtensionVideoData) => {
+    console.log('Clicked video => ', { clickedVideo });
+    const blockedChannelList = await extensionStorage?.getChannelBlockList();
+    const uniqueList = Array.from(new Set([...(blockedChannelList ?? []), clickedVideo.channelId]));
+    await extensionStorage.updateChannelBlockList(uniqueList);
   };
 
-  /**
-   * Filters detected videos by received blacklisted suggestions and channel blacklist.
-   * @param blacklistedVideos - List of blacklisted video details from API.
-   * @returns Filtered list of detected videos that are blacklisted by API or channel.
-   */
-  const filterDetectedVideosWithReceivedArgs = (blacklistedVideos: IBlockedVideoDetails[]): DetectedVideo[] => {
-    const channelBlacklist = extensionStorageData?.channelBlockList || [];
-
-    return detectedVideos.filter(video => {
-      const isVideoBlacklistedByAPI = isVideoInBlacklist(blacklistedVideos, video.videoId);
-      const isVideoBlacklistedByChannel = isChannelBlacklisted(video, channelBlacklist);
-
-      return isVideoBlacklistedByAPI || isVideoBlacklistedByChannel;
-    });
+  // YouTube content change handler
+  const handleContentChange = (videos: typeExtensionVideoData[], url: string) => {
+    console.log('Detected videos => ', videos);
+    const filteredVideos = VideoFilter.filterByType(videos, extensionStorageData!);
+    console.log('Filtered videos => ', videos);
+    allDetectedVideos = filteredVideos;
+    sendFilterRequestToBackground(tabId, filteredVideos);
   };
 
-  /**
-   * Checks if a video is present in the blacklisted videos from API.
-   * @param blacklistedVideos - List of blacklisted video details.
-   * @param videoId - Video ID to check in blacklist.
-   * @returns Boolean indicating if the video is blacklisted by API.
-   */
-  const isVideoInBlacklist = (blacklistedVideos: IBlockedVideoDetails[], videoId: string): boolean => {
-    return blacklistedVideos.some(blacklistedVideo => blacklistedVideo.videoId === videoId);
-  };
-
-  /**
-   * Checks if a video's channel is in the user's channel blacklist.
-   * @param video - Video object containing channel information.
-   * @param channelBlacklist - List of blacklisted channel IDs or names.
-   * @returns Boolean indicating if the video is blacklisted by channel.
-   */
-  const isChannelBlacklisted = (video: typeExtensionVideoData, channelBlacklist: string[]): boolean => {
-    if (!video) return false;
-
-    const { channelId, channel } = video;
-    console.log('XXX => ', { channelId, channel });
-    const isChannelIdBlacklisted = !!(channelId && channelBlacklist.includes(channelId));
-    const isChannelNameBlacklisted = !!(channel && channelBlacklist.includes(channel));
-
-    return isChannelIdBlacklisted || isChannelNameBlacklisted;
-  };
-
-  /**
-   * Clear all DOM elements classes.
-   */
-  const clearAllPreviousDomClasses = () => {
-    const elementsWithBlockedClass = document.querySelectorAll(`.${markingClassName}`);
-    elementsWithBlockedClass.forEach(element => {
-      element.classList.remove(`${markingClassName}`);
-    });
-  };
-
-  /**
-   * Updates DOM elements based on blacklist status.
-   */
-  const updateDomClasses = (blacklistedVideos: typeExtensionVideoData[]) => {
-    blacklistedVideos.forEach(video => {
-      if (!video.referenceDom.classList.contains(`${markingClassName}`)) {
-        video.referenceDom.classList.add(`${markingClassName}`);
-      }
-    });
-  };
-
-  /**
-   * Initializes the YouTubeChangeDetector with the callback function.
-   */
-  const initializeDetector = () => {
-    // @ts-ignore
-    const detector = new YouTubeChangeDetector(onContentChange);
-  };
-
-  /**
-   * Subscribes to updates in the blacklist storage and refreshes the blacklisted video IDs.
-   */
+  // Subscribe to blacklist updates
   const subscribeToBlacklistUpdates = () => {
-    return blockedVideosByTabStorage.subscribe(() => {
-      blockedVideosByTabStorage.get().then(async data => {
-        const { blacklisted } = data.tabs[tabId] ?? { blacklisted: [] };
+    blockedVideosByTabStorage.subscribe(async () => {
+      const { blacklisted } = (await blockedVideosByTabStorage.get()).tabs[tabId] || { blacklisted: [] };
+      console.log('BLACKLISTED 1 => ', blacklisted);
+      const filteredVideos = VideoFilter.filterByBlacklist(allDetectedVideos, blacklisted, extensionStorageData!);
 
-        // Separate videos into blacklisted and non-blacklisted
-        const detectedBlacklistedVideos: typeExtensionVideoData[] = filterDetectedVideosWithReceivedArgs(blacklisted);
-
-        // Clear all previous classes
-        clearAllPreviousDomClasses();
-
-        // Update DOM classes based on blacklist status
-        updateDomClasses(detectedBlacklistedVideos);
-
-        // Log filtered videos for debugging purposes
-        console.log('Videos in blacklist:', blacklisted);
-      });
+      DOMUpdater.clearBlockedClasses();
+      DOMUpdater.updateBlockedClasses(filteredVideos);
     });
   };
 
-  /**
-   * Fetches the initial blacklist and initializes the YouTube change detector.
-   */
-
+  // Subscribe to extension storage updates
   extensionStorage.subscribe(async () => {
     extensionStorageData = await extensionStorage.get();
   });
 
-  extensionStorage.get().then(data => {
-    extensionStorageData = data;
-    initializeDetector();
-  });
-  const unsubscribe = subscribeToBlacklistUpdates();
+  // Initialize content detector
+  new YouTubeChangeDetector(handleContentChange, handleOnClickAddToBlocklist);
+
+  // Subscribe to updates
+  subscribeToBlacklistUpdates();
 };
 
-init().finally();
+init().catch(console.error);
