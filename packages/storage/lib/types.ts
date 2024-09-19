@@ -16,6 +16,13 @@ export type ThemeStorage = BaseStorage<Theme> & {
   toggle: () => Promise<void>;
 };
 
+export type ListModeStorage = {
+  channelBlockList: string[];
+  shortsAllow: false | boolean;
+  playlistAllow: false | boolean;
+  bannerAllow: false | boolean;
+};
+
 // Types for extension storage
 export type typeExtensionStorageListMode = 'DISABLED' | 'ALLOW_LIST' | 'BLOCK_LIST';
 
@@ -24,13 +31,13 @@ export type typeExtensionStorageData = {
   instructions: null | string;
   filterList: string[];
   listMode: EnumExtensionStorageListMode;
-  channelBlockList: string[];
-  shortsAllow: false | boolean;
-  playlistAllow: false | boolean;
-  bannerAllow: false | boolean;
+  allowList: ListModeStorage;
+  blockList: ListModeStorage;
 };
 
 export type typeExtensionStorage = BaseStorage<typeExtensionStorageData> & {
+  getCurrentListMode: () => Promise<ListModeStorage>;
+
   getChannelBlockList: () => Promise<string[]>;
   updateShortsAllow: (switchFeed: boolean) => Promise<void>;
   updatePlayListAllow: (switchFeed: boolean) => Promise<void>;

@@ -1,6 +1,13 @@
 import { createStorage } from './base';
 import { StorageEnum, EnumExtensionStorageListMode } from './enums';
-import type { typeExtensionStorage, typeExtensionStorageData } from './types';
+import type { ListModeStorage, typeExtensionStorage, typeExtensionStorageData } from './types';
+
+const defaultListModeStorage: ListModeStorage = {
+  channelBlockList: [],
+  shortsAllow: false,
+  playlistAllow: false,
+  bannerAllow: false,
+};
 
 const storage = createStorage<typeExtensionStorageData>(
   'extension-storage-key',
@@ -9,10 +16,8 @@ const storage = createStorage<typeExtensionStorageData>(
     instructions: null,
     filterList: [],
     listMode: EnumExtensionStorageListMode.BLOCK_LIST,
-    channelBlockList: [],
-    shortsAllow: false,
-    playlistAllow: false,
-    bannerAllow: false,
+    allowList: defaultListModeStorage,
+    blockList: defaultListModeStorage,
   },
   {
     storageEnum: StorageEnum.Local,
@@ -23,38 +28,80 @@ const storage = createStorage<typeExtensionStorageData>(
 export const extensionStorage: typeExtensionStorage = {
   ...storage,
 
-  ////// POPUP UIs -
-  getChannelBlockList: async (): Promise<string[]> => {
-    const storageData: typeExtensionStorageData = await storage.get();
-    return storageData.channelBlockList;
-  },
-  updateChannelBlockList: async (list: string[]) => {
-    const uniqueList = Array.from(new Set(list)); // Remove duplicates
-    await storage.set(current => ({
-      ...current,
-      channelBlockList: uniqueList,
-    }));
-  },
-  updateShortsAllow: async (switchFeed: boolean) => {
-    await storage.set(current => ({
-      ...current,
-      shortsAllow: !switchFeed,
-    }));
-  },
-  updatePlayListAllow: async (switchFeed: boolean) => {
-    await storage.set(current => ({
-      ...current,
-      playlistAllow: !switchFeed,
-    }));
-  },
-  updateBannerAllow: async (bannerAllow: boolean) => {
-    await storage.set(current => ({
-      ...current,
-      bannerAllow: bannerAllow,
-    }));
+  // Helper function to get the current list based on mode
+  getCurrentListMode: async () => {
+    const { listMode, allowList, blockList } = await storage.get();
+    return listMode === EnumExtensionStorageListMode.BLOCK_LIST ? blockList : allowList;
   },
 
-  // To Update Instructions
+  // Get channel block list based on current list mode
+  getChannelBlockList: async (): Promise<string[]> => {
+    const currentMode = await extensionStorage.getCurrentListMode();
+    return currentMode.channelBlockList;
+  },
+
+  // Update channel block list based on current list mode
+  updateChannelBlockList: async (list: string[]) => {
+    const uniqueList = Array.from(new Set(list));
+    await storage.set(current => {
+      const currentMode =
+        current.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? current.blockList : current.allowList;
+      return {
+        ...current,
+        [current.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? 'blockList' : 'allowList']: {
+          ...currentMode,
+          channelBlockList: uniqueList,
+        },
+      };
+    });
+  },
+
+  // Toggle shorts allow for the current mode
+  updateShortsAllow: async (switchFeed: boolean) => {
+    await storage.set(current => {
+      const currentMode =
+        current.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? current.blockList : current.allowList;
+      return {
+        ...current,
+        [current.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? 'blockList' : 'allowList']: {
+          ...currentMode,
+          shortsAllow: !switchFeed,
+        },
+      };
+    });
+  },
+
+  // Toggle playlist allow for the current mode
+  updatePlayListAllow: async (switchFeed: boolean) => {
+    await storage.set(current => {
+      const currentMode =
+        current.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? current.blockList : current.allowList;
+      return {
+        ...current,
+        [current.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? 'blockList' : 'allowList']: {
+          ...currentMode,
+          playlistAllow: !switchFeed,
+        },
+      };
+    });
+  },
+
+  // Toggle banner allow for the current mode
+  updateBannerAllow: async (bannerAllow: boolean) => {
+    await storage.set(current => {
+      const currentMode =
+        current.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? current.blockList : current.allowList;
+      return {
+        ...current,
+        [current.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? 'blockList' : 'allowList']: {
+          ...currentMode,
+          bannerAllow: bannerAllow,
+        },
+      };
+    });
+  },
+
+  // Update instructions
   updateInstructions: async (instructions: null | string) => {
     await storage.set(current => ({
       ...current,
@@ -115,7 +162,6 @@ export const extensionStorage: typeExtensionStorage = {
   addVideoToBlacklist: async (videoId: string) => {
     await storage.set(current => {
       const videoIds = Array.isArray(current.videoIdsToBeBlacklisted) ? current.videoIdsToBeBlacklisted : [];
-      console.log('current.videoIdsToBeBlacklisted => ', { blk: videoIds, videoId });
       return {
         ...current,
         videoIdsToBeBlacklisted: [...videoIds, videoId],

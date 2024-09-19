@@ -6,7 +6,7 @@ import {
   exampleThemeStorage,
   extensionStorage,
 } from '@extension/storage';
-import type { IAPIPayloadEither, IAPIResponse, IAPIVideoResponse, IPayloadVideo } from '@lib/background/types';
+import type { IAPIPayloadEither, IAPIVideoResponse, IPayloadVideo } from '@lib/background/types';
 
 // Log the current theme for debugging purposes
 exampleThemeStorage.get().then(theme => {

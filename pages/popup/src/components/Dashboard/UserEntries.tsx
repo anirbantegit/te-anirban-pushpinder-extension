@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Chip, CircularProgress, Switch, TextField, Typography } from '@mui/material';
-import { extensionStorage, EnumExtensionStorageListMode, typeExtensionStorageData } from '@extension/storage';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Chip, Switch, Typography } from '@mui/material';
+import { extensionStorage, EnumExtensionStorageListMode } from '@extension/storage';
+import type { typeExtensionStorageData } from '@extension/storage';
 import CloseIcon from '@mui/icons-material/Close';
 
 interface UserEntriesProps {}
@@ -18,46 +19,34 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
   const [accordian, setAccordian] = useState<boolean>(true);
   const [activeMode, setActiveMode] = useState<EnumExtensionStorageListMode>(EnumExtensionStorageListMode.BLOCK_LIST);
 
-  const handleAddChip = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter' && inputValue.trim()) {
-      setFilterList([...filterList, inputValue.trim()]);
-      setInputValue('');
-    }
-  };
-  const handleDeleteChip = (chipToDelete: string) => {
-    setFilterList(filterList.filter(chip => chip !== chipToDelete));
-  };
-
-  const handleAddChannel = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter' && channelInput.trim()) {
-      setblockedChannelList([...blockedChannelList, channelInput.trim()]);
-      setChannelInput('');
-    }
-  };
-  const handleDeleteChannel = (chipToDelete: string) => {
-    setblockedChannelList(blockedChannelList.filter(chip => chip !== chipToDelete));
-  };
   useEffect(() => {
     const fetchInitialData = async () => {
       const extensionData: typeExtensionStorageData = await extensionStorage.get();
-      const { instructions, listMode, filterList, channelBlockList, shortsAllow, playlistAllow, bannerAllow } =
-        extensionData;
+      const { instructions, listMode, filterList, allowList, blockList } = extensionData;
 
       console.log('extensionData => ', extensionData);
 
       setContentFilter(instructions || '');
       setActiveMode(listMode);
       setFilterList(filterList);
-      setblockedChannelList(channelBlockList || []);
-      setShortsSwitchFeed(!shortsAllow);
-      setPlaylistSwitchFeed(!playlistAllow);
-      setBannerBlock(bannerAllow);
+
+      // Set the initial state based on the active list mode (allowList/blockList)
+      const currentList = listMode === EnumExtensionStorageListMode.BLOCK_LIST ? blockList : allowList;
+      setblockedChannelList(currentList.channelBlockList || []);
+      setShortsSwitchFeed(!currentList.shortsAllow);
+      setPlaylistSwitchFeed(!currentList.playlistAllow);
+      setBannerBlock(currentList.bannerAllow);
     };
 
     fetchInitialData();
+    extensionStorage.subscribe(async () => {
+      const extensionData: typeExtensionStorageData = await extensionStorage.get();
+      console.log('extensionData fresh => ', extensionData);
+      await fetchInitialData();
+    });
   }, []);
 
-  useEffect(() => {
+  /*useEffect(() => {
     (async () => {
       const trimmedFilter = contentFilter.trim();
       await extensionStorage.updateInstructions(trimmedFilter === '' ? null : trimmedFilter); // Persist the instructions
@@ -85,18 +74,103 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
     (async () => {
       await extensionStorage.updateBannerAllow(bannerBlock); // Persist the blockedChannel list
     })();
-  }, [bannerBlock]);
+  }, [bannerBlock]);*/
+
+  const handlerUpdateFilterList = useCallback(async (filterList: string[]) => {
+    setFilterList(filterList);
+    await extensionStorage.updateFilterList(filterList);
+  }, []);
+
+  const handleAddChip = async (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' && inputValue.trim()) {
+      await handlerUpdateFilterList([...filterList, inputValue.trim()]);
+      setInputValue('');
+    }
+  };
+  const handleDeleteChip = async (chipToDelete: string) => {
+    await handlerUpdateFilterList(filterList.filter(chip => chip !== chipToDelete));
+  };
+
+  const handlerBannerFeed = useCallback(async (feed: boolean) => {
+    await extensionStorage.updateBannerAllow(feed);
+    setBannerBlock(feed);
+  }, []);
+
+  const handlerPlaylistFeed = useCallback(async (feed: boolean) => {
+    await extensionStorage.updatePlayListAllow(feed);
+    setPlaylistSwitchFeed(feed);
+  }, []);
+
+  const handlerShortsFeed = useCallback(async (feed: boolean) => {
+    await extensionStorage.updateShortsAllow(feed);
+    setShortsSwitchFeed(feed);
+  }, []);
+
   const getButtonClass = (mode: EnumExtensionStorageListMode): string => {
     return activeMode === mode
       ? 'text-[#000] py-[5px] px-2 font-medium bg-[#0B82EF] text-[#fff] rounded-[5px]'
       : 'text-[#000] py-[5px] px-2 font-medium rounded-[5px]';
   };
 
-  useEffect(() => {
+  const handlerSetActiveMode = useCallback((mode: EnumExtensionStorageListMode) => {
+    (async () => {
+      setActiveMode(mode);
+      await extensionStorage.setBlockList(mode);
+    })();
+  }, []);
+
+  // Handler to add a new channel to the blocked list
+  const handlerAddNewBlockedChannelList = useCallback(async (channelName: string) => {
+    setblockedChannelList((prevChannelList: string[]) => {
+      // Ensure the list contains unique values
+      const updatedList = Array.from(new Set([...prevChannelList, channelName]));
+
+      // Update storage asynchronously
+      extensionStorage.updateChannelBlockList(updatedList);
+
+      // Return the updated list for state change
+      return updatedList;
+    });
+  }, []);
+
+  // Handler to remove a channel from the blocked list
+  const handlerRemoveNewBlockedChannelList = useCallback(async (channelName: string) => {
+    setblockedChannelList((prevChannelList: string[]) => {
+      // Remove the channel from the list and ensure uniqueness
+      const updatedList = prevChannelList.filter(channel => channel !== channelName);
+
+      // Update storage asynchronously
+      extensionStorage.updateChannelBlockList(updatedList);
+
+      // Return the updated list for state change
+      return updatedList;
+    });
+  }, []);
+
+  const handleAddChannel = async (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' && channelInput.trim()) {
+      await handlerAddNewBlockedChannelList(channelInput.trim());
+      setChannelInput('');
+    }
+  };
+  const handleDeleteChannel = async (chipToDelete: string) => {
+    await handlerRemoveNewBlockedChannelList(chipToDelete);
+  };
+
+  /*useEffect(() => {
     (async () => {
       await extensionStorage.setBlockList(activeMode);
+      const extensionData: typeExtensionStorageData = await extensionStorage.get();
+      const { allowList, blockList } = extensionData;
+
+      // Set the state based on the current mode (allowList/blockList)
+      const currentList = activeMode === EnumExtensionStorageListMode.BLOCK_LIST ? blockList : allowList;
+      setblockedChannelList(currentList.channelBlockList || []);
+      setShortsSwitchFeed(!currentList.shortsAllow);
+      setPlaylistSwitchFeed(!currentList.playlistAllow);
+      setBannerBlock(currentList.bannerAllow);
     })();
-  }, [activeMode]);
+  }, [activeMode]);*/
 
   return (
     <>
@@ -136,19 +210,19 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
                 <button
                   type="button"
                   className={getButtonClass(EnumExtensionStorageListMode.DISABLED)}
-                  onClick={() => setActiveMode(EnumExtensionStorageListMode.DISABLED)}>
+                  onClick={() => handlerSetActiveMode(EnumExtensionStorageListMode.DISABLED)}>
                   Disabled
                 </button>
                 <button
                   type="button"
                   className={getButtonClass(EnumExtensionStorageListMode.ALLOW_LIST)}
-                  onClick={() => setActiveMode(EnumExtensionStorageListMode.ALLOW_LIST)}>
+                  onClick={() => handlerSetActiveMode(EnumExtensionStorageListMode.ALLOW_LIST)}>
                   Allow List Mode
                 </button>
                 <button
                   type="button"
                   className={getButtonClass(EnumExtensionStorageListMode.BLOCK_LIST)}
-                  onClick={() => setActiveMode(EnumExtensionStorageListMode.BLOCK_LIST)}>
+                  onClick={() => handlerSetActiveMode(EnumExtensionStorageListMode.BLOCK_LIST)}>
                   Block List Mode
                 </button>
               </div>
@@ -235,7 +309,7 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
           <Switch
             color="primary"
             checked={shortsSwitchFeed ?? false}
-            onChange={() => setShortsSwitchFeed(shortsSwitchFeed => !shortsSwitchFeed)}
+            onChange={() => handlerShortsFeed(!shortsSwitchFeed)}
             inputProps={{ 'aria-label': 'block allow switch' }}
           />
           <Typography variant="subtitle2" className="ml-2">
@@ -246,7 +320,7 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
           <Switch
             color="primary"
             checked={playlistSwitchFeed ?? false}
-            onChange={() => setPlaylistSwitchFeed(!playlistSwitchFeed)}
+            onChange={() => handlerPlaylistFeed(!playlistSwitchFeed)}
             inputProps={{ 'aria-label': 'block allow switch' }}
           />
           <Typography variant="subtitle2" className="ml-2">
@@ -257,7 +331,7 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
           <Switch
             color="primary"
             checked={bannerBlock ?? false}
-            onChange={() => setBannerBlock(!bannerBlock)}
+            onChange={() => handlerBannerFeed(!bannerBlock)}
             inputProps={{ 'aria-label': 'block allow switch' }}
           />
           <Typography variant="subtitle2" className="ml-2">

@@ -1,6 +1,6 @@
 import { YouTubeChangeDetector } from './YouTubeChangeDetector';
-import type { IBlockedVideoDetails, typeExtensionStorageData, typeExtensionVideoData } from '@extension/storage/lib';
-import { blockedVideosByTabStorage, extensionStorage } from '@extension/storage/lib';
+import type { IBlockedVideoDetails, typeExtensionStorageData, typeExtensionVideoData } from '@extension/storage';
+import { blockedVideosByTabStorage, extensionStorage, EnumExtensionStorageListMode } from '@extension/storage';
 
 // Helper function to get the current tab ID
 const getCurrentTabId = async (): Promise<number> => {
@@ -30,13 +30,13 @@ function sendFilterRequestToBackground(tabId: number, detectedVideos: typeExtens
 
 // Video Filtering Logic
 const VideoFilter = {
-  isShortsAllowed: (storageData: typeExtensionStorageData): boolean => storageData?.shortsAllow ?? false,
-  isPlaylistAllowed: (storageData: typeExtensionStorageData): boolean => storageData?.playlistAllow ?? false,
-
   filterByType: (videos: typeExtensionVideoData[], storageData: typeExtensionStorageData): typeExtensionVideoData[] => {
+    const currentList =
+      storageData.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? storageData.blockList : storageData.allowList;
+
     return videos.filter(vid => {
-      if (VideoFilter.isShortsAllowed(storageData) && vid.videoType === 'shorts') return false;
-      if (VideoFilter.isPlaylistAllowed(storageData) && vid.videoType === 'playlist') return false;
+      if (currentList.shortsAllow && vid.videoType === 'shorts') return false;
+      if (currentList.playlistAllow && vid.videoType === 'playlist') return false;
       return true;
     });
   },
@@ -46,7 +46,11 @@ const VideoFilter = {
     blacklistedVideos: IBlockedVideoDetails[],
     storageData: typeExtensionStorageData,
   ): typeExtensionVideoData[] => {
-    const channelBlacklist = storageData?.channelBlockList || [];
+    const currentList =
+      storageData.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? storageData.blockList : storageData.allowList;
+
+    const channelBlacklist = currentList.channelBlockList || [];
+
     return allDetectedVideos.filter(video => {
       return (
         blacklistedVideos.some(bv => bv.videoId === video.videoId) ||
@@ -80,8 +84,18 @@ const init = async () => {
 
   const handleOnClickAddToBlocklist = async (clickedVideo: typeExtensionVideoData) => {
     console.log('Clicked video => ', { clickedVideo });
-    const blockedChannelList = await extensionStorage?.getChannelBlockList();
-    const uniqueList = Array.from(new Set([...(blockedChannelList ?? []), clickedVideo.channelId]));
+
+    // Get current list mode
+    const currentListMode =
+      extensionStorageData?.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? 'blockList' : 'allowList';
+
+    // Fetch the appropriate list based on mode
+    const blockedChannelList = extensionStorageData?.[currentListMode].channelBlockList || [];
+
+    const uniqueList = Array.from(new Set([...blockedChannelList, clickedVideo.channelId])).filter(
+      uniqueItem => uniqueItem !== null,
+    ) as string[];
+
     await extensionStorage.updateChannelBlockList(uniqueList);
   };
 
@@ -98,7 +112,9 @@ const init = async () => {
   const subscribeToBlacklistUpdates = () => {
     blockedVideosByTabStorage.subscribe(async () => {
       const { blacklisted } = (await blockedVideosByTabStorage.get()).tabs[tabId] || { blacklisted: [] };
+
       console.log('BLACKLISTED 1 => ', blacklisted);
+
       const filteredVideos = VideoFilter.filterByBlacklist(allDetectedVideos, blacklisted, extensionStorageData!);
 
       DOMUpdater.clearBlockedClasses();

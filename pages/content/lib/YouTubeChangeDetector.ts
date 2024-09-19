@@ -1,5 +1,5 @@
 import type { typeExtensionVideoData } from '@extension/storage/lib';
-import imgContextMenuIcon from '../public/icon-34-new.png';
+import imgContextMenuIcon from './assets/icon-34-new.png';
 
 type typeDetectedVideoFeedsCallback = (videos: typeExtensionVideoData[], url: string) => void;
 type typeAddToBlacklistClickCallback = (video: typeExtensionVideoData) => void;
@@ -33,10 +33,10 @@ export class YouTubeChangeDetector {
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this;
-    document.body.addEventListener('click', async function (event) {
+    document.body.addEventListener('click', async event => {
       that.removeBlocklistMenuItem();
 
-      let targetElement = event.target as Node | null;
+      const targetElement = event.target as Node | null;
       console.log('Clicked element:', targetElement);
       console.log('Detected videos:', that.detectedVideos);
 
@@ -63,6 +63,7 @@ export class YouTubeChangeDetector {
       } else {
         console.log('No target element found in event.');
       }
+      return true;
     });
   }
 
@@ -101,7 +102,11 @@ export class YouTubeChangeDetector {
       const domContextMenu: Element | null = document.querySelector('ytd-menu-popup-renderer');
 
       let isOpened = false;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
       if (domContextMenu && domContextMenu.style.display) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
         isOpened = domContextMenu.style.display !== 'none';
       } else if (domContextMenu) {
         isOpened = true;
@@ -219,7 +224,7 @@ export class YouTubeChangeDetector {
 
   private removeBlocklistMenuItem = (): void => {
     // Look for the "Add to Blocklist" menu item by the text or some unique identifier
-    const blocklistMenuItem: Element | undefined = document.querySelector('.scopsee-custom-context-button');
+    const blocklistMenuItem: Element | null = document.querySelector('.scopsee-custom-context-button');
 
     // If the item exists, remove it along with its event listeners
     if (blocklistMenuItem) {
@@ -237,21 +242,28 @@ export class YouTubeChangeDetector {
 
     const combinedArray = [...newVideos, ...newShorts, ...newPlaylists];
 
-    const prioritizeVideoTypes = arr => {
+    const prioritizeVideoTypes = (arr: typeExtensionVideoData[]) => {
       const priorityMap = { video: 1, short: 2, playlist: 3 };
 
       const groupedById = arr.reduce((acc, curr) => {
         const { videoId } = curr;
 
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
         if (!acc[videoId]) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
           acc[videoId] = [];
         }
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
         acc[videoId].push(curr);
         return acc;
       }, {});
 
       return Object.values(groupedById).map(group => {
-        // Sort by videoType priority (video > short > playlist)
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
         return group.sort((a, b) => priorityMap[a.videoType] - priorityMap[b.videoType])[0];
       });
     };
