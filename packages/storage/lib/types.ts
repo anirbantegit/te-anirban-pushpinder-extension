@@ -17,6 +17,7 @@ export type ThemeStorage = BaseStorage<Theme> & {
 };
 
 export type ListModeStorage = {
+  filterList: string[];
   channelBlockList: string[];
   shortsAllow: false | boolean;
   playlistAllow: false | boolean;

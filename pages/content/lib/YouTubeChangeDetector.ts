@@ -47,7 +47,7 @@ export class YouTubeChangeDetector {
             console.log('Match found in detected video:', video);
 
             // Ensure the video has a channelId
-            if (video.channelId) {
+            if (video.channelId || video.channel) {
               that.contextMenu = await that.getContextMenuIfOpened();
               if (that.contextMenu) {
                 that.addToBlocklistMenuItem(that.contextMenu);

@@ -33,7 +33,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'filterVideosForTab':
       console.log('HITTED...');
-      handleFilterVideosForTab(message, sendResponse);
+      handleFilterVideosForTab(message, sendResponse).finally();
       return true; // Indicates asynchronous response
 
     default:
@@ -56,7 +56,7 @@ function handleGetCurrentTabId(sendResponse: (response: { tabId: number }) => vo
  * @param message - The incoming message containing tabId and detectedVideos
  * @param sendResponse - Callback function to send the response
  */
-function handleFilterVideosForTab(
+async function handleFilterVideosForTab(
   message: { tabId: number; detectedVideos: typeExtensionVideoData[] },
   sendResponse: (response: { status: string; error?: string }) => void,
 ) {
@@ -69,113 +69,124 @@ function handleFilterVideosForTab(
   }
   console.log('REQUEST => ', { tabId, detectedVideos });
 
+  const myExtensionStorage = await extensionStorage.get();
+
+  if (myExtensionStorage.listMode === 'DISABLED') {
+    return;
+  }
+
+  const currentMode =
+    myExtensionStorage.listMode === EnumExtensionStorageListMode.BLOCK_LIST
+      ? myExtensionStorage.blockList
+      : myExtensionStorage.allowList;
+
   // Clear the previous debounce timer if it exists
   clearDebounceTimer(tabId);
 
   // Cancel the previous request if it exists
   abortOngoingRequest(tabId);
 
-  (async () => {
-    await blockedVideosByTabStorage.updateIsProcessing(tabId, true);
+  await blockedVideosByTabStorage.updateIsProcessing(tabId, true);
 
-    // Set up a new debounce timer
-    debounceTimers[tabId] = setTimeout(async () => {
-      try {
-        await blockedVideosByTabStorage.updateIsProcessing(tabId, true);
+  // Set up a new debounce timer
+  debounceTimers[tabId] = setTimeout(async () => {
+    try {
+      await blockedVideosByTabStorage.updateIsProcessing(tabId, true);
 
-        // Create a new AbortController for the new request
-        abortControllers[tabId] = new AbortController();
-        const { signal } = abortControllers[tabId];
+      // Create a new AbortController for the new request
+      abortControllers[tabId] = new AbortController();
+      const { signal } = abortControllers[tabId];
 
-        // Fetch instructions, filter list, and block/allow list setting from storage
-        const { instructions, filterList, listMode } = await extensionStorage.get();
+      const { filterList } = currentMode;
 
-        // Initialize the payload with the detected videos
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        const payload: IAPIPayloadEither = {};
+      // Fetch instructions, filter list, and block/allow list setting from storage
+      const { instructions, listMode } = myExtensionStorage;
 
-        payload.videos = detectedVideos.map<IPayloadVideo>(detectedVideo => ({
-          video_id: detectedVideo.videoId,
-          timestamp: Math.floor(Date.now() / 1000),
-          title: detectedVideo.title,
-          thumbnail_url: detectedVideo.thumbnail,
-          channel_name: detectedVideo.channel,
-          channel_id: detectedVideo.channelId,
-          channel_url: `https://youtube.com/@${detectedVideo.channelId}`,
-        })) as IPayloadVideo[];
+      // Initialize the payload with the detected videos
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      const payload: IAPIPayloadEither = {};
 
-        // Prepare filters and assign them to the appropriate list
-        const filters: string[] = filterList ?? [];
-        if (instructions) filters.push(instructions);
+      payload.videos = detectedVideos.map<IPayloadVideo>(detectedVideo => ({
+        video_id: detectedVideo.videoId,
+        timestamp: Math.floor(Date.now() / 1000),
+        title: detectedVideo.title,
+        thumbnail_url: detectedVideo.thumbnail,
+        channel_name: detectedVideo.channel,
+        channel_id: detectedVideo.channelId,
+        channel_url: `https://youtube.com/@${detectedVideo.channelId}`,
+      })) as IPayloadVideo[];
 
-        switch (listMode) {
-          case EnumExtensionStorageListMode.BLOCK_LIST:
-            payload.block_list = filters;
-            break;
-          case EnumExtensionStorageListMode.ALLOW_LIST:
-            payload.allow_list = filters;
-            break;
-        }
+      // Prepare filters and assign them to the appropriate list
+      const filters: string[] = filterList ?? [];
+      if (instructions) filters.push(instructions);
 
-        console.log('payload => ', { payload });
-
-        // Send the API request with the abort signal
-        const response = await fetch('http://50.54.221.95:12731/filterVideos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          signal,
-        });
-
-        console.log('RESP => ', { response });
-
-        // Check if the response is OK
-        if (!response.ok) {
-          sendResponse({ status: 'error', error: `HTTP error! status: ${response.status}` });
-          return;
-        }
-
-        const data = await response.json();
-
-        // Check if data is an array before filtering
-        if (!Array.isArray(data)) {
-          sendResponse({ status: 'error', error: 'Invalid response data format' });
-          return;
-        }
-
-        const blockedVideoIds: string[] = data
-          .filter((datum: IAPIVideoResponse) => datum.blocked)
-          .map(datum => datum.video_id);
-
-        const blacklistedDetectedVideos: IBlockedVideoDetails[] = detectedVideos
-          .filter(detectedVideo => blockedVideoIds.some(id => detectedVideo.videoId === id))
-          .map(detectedVideo => ({
-            videoId: detectedVideo.videoId,
-            detectedAt: new Date(Date.now()).toISOString(), // Convert to ISO string
-            title: detectedVideo.title,
-            channel: detectedVideo.channel,
-            channelId: detectedVideo.channelId,
-            videoType: detectedVideo.videoType,
-            thumbnail: detectedVideo.thumbnail,
-          }));
-
-        console.log('fff => ', blacklistedDetectedVideos);
-
-        await blockedVideosByTabStorage.updateTabBlacklist(tabId, detectedVideos, blacklistedDetectedVideos);
-
-        // Send the filtered video data back to the content script
-        chrome.tabs.sendMessage(tabId, { action: 'filterVideosResponse', error: null, data: blockedVideoIds });
-        sendResponse({ status: 'success' });
-      } catch (error) {
-        handleError(tabId, error as Error, sendResponse);
-      } finally {
-        await blockedVideosByTabStorage.updateIsProcessing(tabId, false);
-        // Cleanup the abort controller after the request is done
-        cleanupAfterRequest(tabId);
+      switch (listMode) {
+        case EnumExtensionStorageListMode.BLOCK_LIST:
+          payload.block_list = filters;
+          break;
+        case EnumExtensionStorageListMode.ALLOW_LIST:
+          payload.allow_list = filters;
+          break;
       }
-    }, 300); // Adjust the debounce delay as needed (e.g., 300ms)
-  })();
+
+      console.log('payload => ', { payload });
+
+      // Send the API request with the abort signal
+      const response = await fetch('http://50.54.221.95:12731/filterVideos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal,
+      });
+
+      console.log('RESP => ', { response });
+
+      // Check if the response is OK
+      if (!response.ok) {
+        sendResponse({ status: 'error', error: `HTTP error! status: ${response.status}` });
+        return;
+      }
+
+      const data = await response.json();
+
+      // Check if data is an array before filtering
+      if (!Array.isArray(data)) {
+        sendResponse({ status: 'error', error: 'Invalid response data format' });
+        return;
+      }
+
+      const blockedVideoIds: string[] = data
+        .filter((datum: IAPIVideoResponse) => datum.blocked)
+        .map(datum => datum.video_id);
+
+      const blacklistedDetectedVideos: IBlockedVideoDetails[] = detectedVideos
+        .filter(detectedVideo => blockedVideoIds.some(id => detectedVideo.videoId === id))
+        .map(detectedVideo => ({
+          videoId: detectedVideo.videoId,
+          detectedAt: new Date(Date.now()).toISOString(), // Convert to ISO string
+          title: detectedVideo.title,
+          channel: detectedVideo.channel,
+          channelId: detectedVideo.channelId,
+          videoType: detectedVideo.videoType,
+          thumbnail: detectedVideo.thumbnail,
+        }));
+
+      console.log('fff => ', blacklistedDetectedVideos);
+
+      await blockedVideosByTabStorage.updateTabBlacklist(tabId, detectedVideos, blacklistedDetectedVideos);
+
+      // Send the filtered video data back to the content script
+      chrome.tabs.sendMessage(tabId, { action: 'filterVideosResponse', error: null, data: blockedVideoIds });
+      sendResponse({ status: 'success' });
+    } catch (error) {
+      handleError(tabId, error as Error, sendResponse);
+    } finally {
+      await blockedVideosByTabStorage.updateIsProcessing(tabId, false);
+      // Cleanup the abort controller after the request is done
+      cleanupAfterRequest(tabId);
+    }
+  }, 300); // Adjust the debounce delay as needed (e.g., 300ms)
 }
 
 /**

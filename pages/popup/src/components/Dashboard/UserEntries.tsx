@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Chip, Switch, Typography } from '@mui/material';
 import { extensionStorage, EnumExtensionStorageListMode } from '@extension/storage';
 import type { typeExtensionStorageData } from '@extension/storage';
@@ -22,13 +22,12 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       const extensionData: typeExtensionStorageData = await extensionStorage.get();
-      const { instructions, listMode, filterList, allowList, blockList } = extensionData;
+      const { instructions, listMode, allowList, blockList } = extensionData;
 
       console.log('extensionData => ', extensionData);
 
       setContentFilter(instructions || '');
       setActiveMode(listMode);
-      setFilterList(filterList);
 
       // Set the initial state based on the active list mode (allowList/blockList)
       const currentList = listMode === EnumExtensionStorageListMode.BLOCK_LIST ? blockList : allowList;
@@ -36,6 +35,7 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
       setShortsSwitchFeed(!currentList.shortsAllow);
       setPlaylistSwitchFeed(!currentList.playlistAllow);
       setBannerBlock(currentList.bannerAllow);
+      setFilterList(currentList.filterList);
     };
 
     fetchInitialData();
@@ -46,35 +46,7 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
     });
   }, []);
 
-  /*useEffect(() => {
-    (async () => {
-      const trimmedFilter = contentFilter.trim();
-      await extensionStorage.updateInstructions(trimmedFilter === '' ? null : trimmedFilter); // Persist the instructions
-      await extensionStorage.updateFilterList(filterList); // Persist the filter list
-    })();
-  }, [contentFilter, filterList]);
-
-  useEffect(() => {
-    (async () => {
-      await extensionStorage.updateChannelBlockList(blockedChannelList); // Persist the blockedChannel list
-    })();
-  }, [blockedChannelList]);
-
-  useEffect(() => {
-    (async () => {
-      await extensionStorage.updateShortsAllow(shortsSwitchFeed); // Persist the blockedChannel list
-    })();
-  }, [shortsSwitchFeed]);
-  useEffect(() => {
-    (async () => {
-      await extensionStorage.updatePlayListAllow(playlistSwitchFeed); // Persist the blockedChannel list
-    })();
-  }, [playlistSwitchFeed]);
-  useEffect(() => {
-    (async () => {
-      await extensionStorage.updateBannerAllow(bannerBlock); // Persist the blockedChannel list
-    })();
-  }, [bannerBlock]);*/
+  const isDisabled: boolean = useMemo(() => activeMode === 'DISABLED', [activeMode]);
 
   const handlerUpdateFilterList = useCallback(async (filterList: string[]) => {
     setFilterList(filterList);
@@ -157,21 +129,6 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
     await handlerRemoveNewBlockedChannelList(chipToDelete);
   };
 
-  /*useEffect(() => {
-    (async () => {
-      await extensionStorage.setBlockList(activeMode);
-      const extensionData: typeExtensionStorageData = await extensionStorage.get();
-      const { allowList, blockList } = extensionData;
-
-      // Set the state based on the current mode (allowList/blockList)
-      const currentList = activeMode === EnumExtensionStorageListMode.BLOCK_LIST ? blockList : allowList;
-      setblockedChannelList(currentList.channelBlockList || []);
-      setShortsSwitchFeed(!currentList.shortsAllow);
-      setPlaylistSwitchFeed(!currentList.playlistAllow);
-      setBannerBlock(currentList.bannerAllow);
-    })();
-  }, [activeMode]);*/
-
   return (
     <>
       <div className="w-full">
@@ -181,6 +138,7 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
         <div className="flex flex-col gap-y-2">
           <div className="w-full">
             <input
+              disabled={isDisabled}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight 
         focus:outline-none focus:shadow-outline focus:border-[#0B82EF]"
               type="text"
@@ -190,18 +148,19 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
               onKeyDown={handleAddChip}
             />
             <div className="flex flex-wrap gap-2 mt-2">
-              {filterList.map((chip, index) => (
-                <Chip
-                  key={`chip-${index}`}
-                  label={chip}
-                  size="small"
-                  onDelete={() => handleDeleteChip(chip)}
-                  className="m-1"
-                  variant="outlined"
-                  style={{ backgroundColor: '#0B82EF', color: '#fff', borderRadius: '5px' }}
-                  deleteIcon={<CloseIcon style={{ color: '#fff' }} />}
-                />
-              ))}
+              {!isDisabled &&
+                filterList.map((chip, index) => (
+                  <Chip
+                    key={`chip-${index}`}
+                    label={chip}
+                    size="small"
+                    onDelete={() => handleDeleteChip(chip)}
+                    className="m-1"
+                    variant="outlined"
+                    style={{ backgroundColor: '#0B82EF', color: '#fff', borderRadius: '5px' }}
+                    deleteIcon={<CloseIcon style={{ color: '#fff' }} />}
+                  />
+                ))}
             </div>
           </div>
           <div className="w-full">
@@ -231,114 +190,118 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
         </div>
       </div>
 
-      <div className="w-full">
-        <Typography variant="subtitle2" component="h5" className="mb-0 text-left">
-          <span className="font-medium">Blocked Channels</span>
-        </Typography>
-        <div className="flex flex-col gap-y-2">
+      {!isDisabled && (
+        <Fragment>
           <div className="w-full">
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight 
+            <Typography variant="subtitle2" component="h5" className="mb-0 text-left">
+              <span className="font-medium">Blocked Channels</span>
+            </Typography>
+            <div className="flex flex-col gap-y-2">
+              <div className="w-full">
+                <input
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight
         focus:outline-none focus:shadow-outline focus:border-[#0B82EF]"
-              type="text"
-              placeholder="Blocked Channels"
-              value={channelInput}
-              onChange={e => setChannelInput(e.target.value)}
-              onKeyDown={handleAddChannel}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full">
-        <div className="bg-white rounded-lg">
-          <div
-            className={
-              accordian
-                ? 'p-4 flex justify-between items-center gap-2 border-b-[#f0f0f0] border-b border-solid'
-                : 'p-4 flex justify-between items-center gap-2'
-            }>
-            <div className="flex-auto flex items-center">
-              <h4 className="text-sm font-medium">Block Listed Channels ({blockedChannelList?.length})</h4>
-            </div>
-
-            <button
-              type="button"
-              className="flex-[0_0_auto]"
-              onClick={() => setAccordian(blockedChannelList?.length ? !accordian : false)}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width={12}
-                height={12}
-                fill="currentColor"
-                className={
-                  (blockedChannelList?.length ? accordian : false)
-                    ? 'bi bi-chevron-down transition-[0.5s] rotate-180'
-                    : 'bi bi-chevron-down transition-[0.5s]'
-                }
-                viewBox="0 0 16 16">
-                <path
-                  fillRule="evenodd"
-                  d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
+                  type="text"
+                  placeholder="Blocked Channels"
+                  value={channelInput}
+                  onChange={e => setChannelInput(e.target.value)}
+                  onKeyDown={handleAddChannel}
                 />
-              </svg>
-            </button>
-          </div>
-          {(blockedChannelList?.length ? accordian : false) && (
-            <div className="flex flex-col gap-y-1 pl-8 pr-[8px] pt-2 pb-3 overflow-x-hidden overflow-y-auto max-h-[120px]">
-              {blockedChannelList?.length > 0 &&
-                blockedChannelList?.map((listing: any, index: any) => {
-                  return (
-                    <div className="flex w-full" key={index}>
-                      <div className="flex flex-auto">
-                        <div className="text-[13px] text-[#555] font-medium">{listing}</div>
-                      </div>
-                      <div className="flex flex-[0_0_auto]" onClick={() => handleDeleteChannel(listing)}>
-                        <CloseIcon style={{ color: '#999', fontSize: '18px' }} />
-                      </div>
-                    </div>
-                  );
-                })}
+              </div>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <div className="flex items-center justify-between pt-0 mt-0">
-        <div className="flex items-center">
-          <Switch
-            color="primary"
-            checked={shortsSwitchFeed ?? false}
-            onChange={() => handlerShortsFeed(!shortsSwitchFeed)}
-            inputProps={{ 'aria-label': 'block allow switch' }}
-          />
-          <Typography variant="subtitle2" className="ml-2">
-            {shortsSwitchFeed ? 'Block Shorts' : 'Allow Shorts'}
-          </Typography>
-        </div>
-        <div className="flex items-center">
-          <Switch
-            color="primary"
-            checked={playlistSwitchFeed ?? false}
-            onChange={() => handlerPlaylistFeed(!playlistSwitchFeed)}
-            inputProps={{ 'aria-label': 'block allow switch' }}
-          />
-          <Typography variant="subtitle2" className="ml-2">
-            Block Playlists
-          </Typography>
-        </div>
-        <div className="flex items-center">
-          <Switch
-            color="primary"
-            checked={bannerBlock ?? false}
-            onChange={() => handlerBannerFeed(!bannerBlock)}
-            inputProps={{ 'aria-label': 'block allow switch' }}
-          />
-          <Typography variant="subtitle2" className="ml-2">
-            Block Banners
-          </Typography>
-        </div>
-      </div>
+          <div className="w-full">
+            <div className="bg-white rounded-lg">
+              <div
+                className={
+                  accordian
+                    ? 'p-4 flex justify-between items-center gap-2 border-b-[#f0f0f0] border-b border-solid'
+                    : 'p-4 flex justify-between items-center gap-2'
+                }>
+                <div className="flex-auto flex items-center">
+                  <h4 className="text-sm font-medium">Block Listed Channels ({blockedChannelList?.length})</h4>
+                </div>
+
+                <button
+                  type="button"
+                  className="flex-[0_0_auto]"
+                  onClick={() => setAccordian(blockedChannelList?.length ? !accordian : false)}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={12}
+                    height={12}
+                    fill="currentColor"
+                    className={
+                      (blockedChannelList?.length ? accordian : false)
+                        ? 'bi bi-chevron-down transition-[0.5s] rotate-180'
+                        : 'bi bi-chevron-down transition-[0.5s]'
+                    }
+                    viewBox="0 0 16 16">
+                    <path
+                      fillRule="evenodd"
+                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
+                    />
+                  </svg>
+                </button>
+              </div>
+              {(blockedChannelList?.length ? accordian : false) && (
+                <div className="flex flex-col gap-y-1 pl-8 pr-[8px] pt-2 pb-3 overflow-x-hidden overflow-y-auto max-h-[120px]">
+                  {blockedChannelList?.length > 0 &&
+                    blockedChannelList?.map((listing: any, index: any) => {
+                      return (
+                        <div className="flex w-full" key={index}>
+                          <div className="flex flex-auto">
+                            <div className="text-[13px] text-[#555] font-medium">{listing}</div>
+                          </div>
+                          <div className="flex flex-[0_0_auto]" onClick={() => handleDeleteChannel(listing)}>
+                            <CloseIcon style={{ color: '#999', fontSize: '18px' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-0 mt-0">
+            <div className="flex items-center">
+              <Switch
+                color="primary"
+                checked={shortsSwitchFeed ?? false}
+                onChange={() => handlerShortsFeed(!shortsSwitchFeed)}
+                inputProps={{ 'aria-label': 'block allow switch' }}
+              />
+              <Typography variant="subtitle2" className="ml-2">
+                {shortsSwitchFeed ? 'Block Shorts' : 'Allow Shorts'}
+              </Typography>
+            </div>
+            <div className="flex items-center">
+              <Switch
+                color="primary"
+                checked={playlistSwitchFeed ?? false}
+                onChange={() => handlerPlaylistFeed(!playlistSwitchFeed)}
+                inputProps={{ 'aria-label': 'block allow switch' }}
+              />
+              <Typography variant="subtitle2" className="ml-2">
+                Block Playlists
+              </Typography>
+            </div>
+            <div className="flex items-center">
+              <Switch
+                color="primary"
+                checked={bannerBlock ?? false}
+                onChange={() => handlerBannerFeed(!bannerBlock)}
+                inputProps={{ 'aria-label': 'block allow switch' }}
+              />
+              <Typography variant="subtitle2" className="ml-2">
+                Block Banners
+              </Typography>
+            </div>
+          </div>
+        </Fragment>
+      )}
     </>
   );
 };

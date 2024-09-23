@@ -1,6 +1,6 @@
 import { YouTubeChangeDetector } from './YouTubeChangeDetector';
 import type { IBlockedVideoDetails, typeExtensionStorageData, typeExtensionVideoData } from '@extension/storage';
-import { blockedVideosByTabStorage, extensionStorage, EnumExtensionStorageListMode } from '@extension/storage';
+import { blockedVideosByTabStorage, EnumExtensionStorageListMode, extensionStorage } from '@extension/storage';
 
 // Helper function to get the current tab ID
 const getCurrentTabId = async (): Promise<number> => {
@@ -86,21 +86,25 @@ const init = async () => {
     console.log('Clicked video => ', { clickedVideo });
 
     // Get current list mode
-    const currentListMode =
-      extensionStorageData?.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? 'blockList' : 'allowList';
+    const currentListMode = extensionStorageData?.listMode ?? EnumExtensionStorageListMode.DISABLED;
 
-    // Fetch the appropriate list based on mode
-    const blockedChannelList = extensionStorageData?.[currentListMode].channelBlockList || [];
+    if (currentListMode === EnumExtensionStorageListMode.DISABLED) {
+      await blockedVideosByTabStorage.clearTabBlacklist(tabId);
+    } else {
+      // Fetch the appropriate list based on mode
+      const blockedChannelList = extensionStorageData?.[currentListMode]?.channelBlockList || [];
 
-    const uniqueList = Array.from(new Set([...blockedChannelList, clickedVideo.channelId])).filter(
-      uniqueItem => uniqueItem !== null,
-    ) as string[];
+      const uniqueList = Array.from(
+        new Set([...blockedChannelList, clickedVideo.channelId ?? clickedVideo.channel]),
+      ).filter(uniqueItem => uniqueItem !== null) as string[];
 
-    await extensionStorage.updateChannelBlockList(uniqueList);
+      await extensionStorage.updateChannelBlockList(uniqueList);
+    }
   };
 
   // YouTube content change handler
   const handleContentChange = (videos: typeExtensionVideoData[], url: string) => {
+    blockedVideosByTabStorage.updateIsProcessing(tabId, true);
     console.log('Detected videos => ', videos);
     const filteredVideos = VideoFilter.filterByType(videos, extensionStorageData!);
     console.log('Filtered videos => ', videos);
@@ -125,6 +129,7 @@ const init = async () => {
   // Subscribe to extension storage updates
   extensionStorage.subscribe(async () => {
     extensionStorageData = await extensionStorage.get();
+    location.reload();
   });
 
   // Initialize content detector

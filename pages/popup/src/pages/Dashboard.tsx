@@ -1,9 +1,9 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Fragment, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { PopupLayout } from '@src/components/layout/PopupLayout';
-import { VideoManager } from '@src/components/Dashboard/VideoManage';
-import type { IBlockedVideoDetails, typeExtensionVideoData } from '@extension/storage/lib';
+import type { IBlockedVideoDetails, typeExtensionStorageData, typeExtensionVideoData } from '@extension/storage/lib';
+import { EnumExtensionStorageListMode } from '@extension/storage/lib';
 import { blockedVideosByTabStorage, extensionStorage } from '@extension/storage';
-import { Chip, CircularProgress, Switch, TextField } from '@mui/material';
+import { CircularProgress } from '@mui/material';
 import { UserEntries } from '@src/components/Dashboard/UserEntries';
 import { VideoCard } from '@src/components/Dashboard/VideoCard';
 
@@ -90,6 +90,7 @@ export const Dashboard = () => {
   const [tabId, setTabId] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isDetecting, setIsDetecting] = useState<boolean>(false);
+  const [activeMode, setActiveMode] = useState<EnumExtensionStorageListMode>(EnumExtensionStorageListMode.BLOCK_LIST);
 
   useEffect(() => {
     const fetchTabId = async () => {
@@ -113,14 +114,28 @@ export const Dashboard = () => {
         }
       };
 
-      fetchBlockedVideos();
+      const syncWithExtensionData = async () => {
+        const data: typeExtensionStorageData = await extensionStorage.get();
+        setActiveMode(data.listMode ?? EnumExtensionStorageListMode.DISABLED);
+      };
 
-      const unsubscribe = blockedVideosByTabStorage.subscribe(fetchBlockedVideos);
+      fetchBlockedVideos().finally();
+      const unsubscribeBlockedVideosByTabStorage = blockedVideosByTabStorage.subscribe(fetchBlockedVideos);
+
+      syncWithExtensionData().finally();
+      const unsubscribeExtensionStorage = extensionStorage.subscribe(syncWithExtensionData);
+
+      const unsubscribe = () => {
+        unsubscribeBlockedVideosByTabStorage();
+        unsubscribeExtensionStorage();
+      };
 
       return () => unsubscribe();
     }
     return undefined;
   }, [tabId]);
+
+  const isDisabled: boolean = useMemo(() => activeMode === 'DISABLED', [activeMode]);
 
   // Use useMemo to memoize the filtered lists
   const filteredBlockedShorts = useMemo(
@@ -150,46 +165,50 @@ export const Dashboard = () => {
       <div className="flex flex-col space-y-3">
         <UserEntries />
 
-        {/* Blocked Shorts */}
-        {filteredBlockedShorts.length > 0 && (
-          <BlockedSection
-            title="Shorts"
-            isProcessing={isProcessing}
-            isDetecting={isDetecting}
-            blockedCount={filteredBlockedShorts.length}
-            detectedCount={detectedVideos.filter(video => video.videoType === 'shorts').length}
-            videos={filteredBlockedShorts}
-            accordian={activeAccordion === 'shorts'}
-            onToggle={() => handleAccordionToggle('shorts')}
-          />
-        )}
+        {!isDisabled && (
+          <Fragment>
+            {/* Blocked Shorts */}
+            {filteredBlockedShorts.length > 0 && (
+              <BlockedSection
+                title="Shorts"
+                isProcessing={isProcessing}
+                isDetecting={isDetecting}
+                blockedCount={filteredBlockedShorts.length}
+                detectedCount={detectedVideos.filter(video => video.videoType === 'shorts').length}
+                videos={filteredBlockedShorts}
+                accordian={activeAccordion === 'shorts'}
+                onToggle={() => handleAccordionToggle('shorts')}
+              />
+            )}
 
-        {/* Blocked Playlists */}
-        {filteredBlockedPlaylist.length > 0 && (
-          <BlockedSection
-            title="Playlist"
-            isProcessing={isProcessing}
-            isDetecting={isDetecting}
-            blockedCount={filteredBlockedPlaylist.length}
-            detectedCount={detectedVideos.filter(video => video.videoType === 'playlist').length}
-            videos={filteredBlockedPlaylist}
-            accordian={activeAccordion === 'playlist'}
-            onToggle={() => handleAccordionToggle('playlist')}
-          />
-        )}
+            {/* Blocked Playlists */}
+            {filteredBlockedPlaylist.length > 0 && (
+              <BlockedSection
+                title="Playlist"
+                isProcessing={isProcessing}
+                isDetecting={isDetecting}
+                blockedCount={filteredBlockedPlaylist.length}
+                detectedCount={detectedVideos.filter(video => video.videoType === 'playlist').length}
+                videos={filteredBlockedPlaylist}
+                accordian={activeAccordion === 'playlist'}
+                onToggle={() => handleAccordionToggle('playlist')}
+              />
+            )}
 
-        {/* Blocked Videos */}
-        {filteredBlockedVideos.length > 0 && (
-          <BlockedSection
-            title="Videos"
-            isProcessing={isProcessing}
-            isDetecting={isDetecting}
-            blockedCount={filteredBlockedVideos.length}
-            detectedCount={detectedVideos.filter(video => video.videoType === 'video').length}
-            videos={filteredBlockedVideos}
-            accordian={activeAccordion === 'videos'}
-            onToggle={() => handleAccordionToggle('videos')}
-          />
+            {/* Blocked Videos */}
+            {filteredBlockedVideos.length > 0 && (
+              <BlockedSection
+                title="Videos"
+                isProcessing={isProcessing}
+                isDetecting={isDetecting}
+                blockedCount={filteredBlockedVideos.length}
+                detectedCount={detectedVideos.filter(video => video.videoType === 'video').length}
+                videos={filteredBlockedVideos}
+                accordian={activeAccordion === 'videos'}
+                onToggle={() => handleAccordionToggle('videos')}
+              />
+            )}
+          </Fragment>
         )}
       </div>
     </PopupLayout>

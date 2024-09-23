@@ -3,6 +3,7 @@ import { StorageEnum, EnumExtensionStorageListMode } from './enums';
 import type { ListModeStorage, typeExtensionStorage, typeExtensionStorageData } from './types';
 
 const defaultListModeStorage: ListModeStorage = {
+  filterList: [],
   channelBlockList: [],
   shortsAllow: false,
   playlistAllow: false,
@@ -119,11 +120,19 @@ export const extensionStorage: typeExtensionStorage = {
   },
 
   // Add a string to the filter list
-  updateFilterList: async (filters: string[]) => {
-    await storage.set(current => ({
-      ...current,
-      filterList: [...filters],
-    }));
+  updateFilterList: async (filtersList: string[]) => {
+    const uniqueList = Array.from(new Set(filtersList));
+    await storage.set(current => {
+      const currentMode =
+        current.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? current.blockList : current.allowList;
+      return {
+        ...current,
+        [current.listMode === EnumExtensionStorageListMode.BLOCK_LIST ? 'blockList' : 'allowList']: {
+          ...currentMode,
+          filterList: uniqueList,
+        },
+      };
+    });
   },
 
   // Remove a string from the filter list
