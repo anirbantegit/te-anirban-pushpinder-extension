@@ -92,7 +92,9 @@ const init = async () => {
       await blockedVideosByTabStorage.clearTabBlacklist(tabId);
     } else {
       // Fetch the appropriate list based on mode
-      const blockedChannelList = extensionStorageData?.[currentListMode]?.channelBlockList || [];
+      const blockedChannelList =
+        extensionStorageData?.[currentListMode === EnumExtensionStorageListMode.ALLOW_LIST ? 'allowList' : 'blockList']
+          ?.channelBlockList || [];
 
       const uniqueList = Array.from(
         new Set([...blockedChannelList, clickedVideo.channelId ?? clickedVideo.channel]),
