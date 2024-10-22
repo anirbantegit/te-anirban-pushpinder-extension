@@ -19,13 +19,9 @@ const getCurrentTabId = async (): Promise<number> => {
 function sendFilterRequestToBackground(tabId: number, detectedVideos: typeExtensionVideoData[]) {
   if (!detectedVideos || detectedVideos.length === 0) return;
 
-  chrome.runtime.sendMessage({ action: 'filterVideosForTab', tabId, detectedVideos }, response => {
-    if (response.error) {
-      console.error('Failed to filter videos:', response.error);
-    } else {
-      console.log('Filtered videos data:', response.data);
-    }
-  });
+  (async () => {
+    await chrome.runtime.sendMessage({ action: 'filterVideosForTab', tabId, detectedVideos });
+  })();
 }
 
 // Video Filtering Logic
@@ -64,27 +60,40 @@ const VideoFilter = {
 // DOM Manipulation Logic
 const DOMUpdater = {
   markingClassName: 'extension-blocked',
+  hidingClassName: 'extension-hide',
 
   clearBlockedClasses: () => {
     document
-      .querySelectorAll(`.${DOMUpdater.markingClassName}`)
-      .forEach(el => el.classList.remove(DOMUpdater.markingClassName));
+      .querySelectorAll(`.${DOMUpdater.markingClassName}, .${DOMUpdater.hidingClassName}`) // Clear both classes
+      .forEach(el => {
+        el.classList.remove(DOMUpdater.markingClassName);
+        // el.classList.remove(DOMUpdater.hidingClassName); // Remove hiding class
+      });
   },
 
   updateBlockedClasses: (videos: typeExtensionVideoData[]) => {
     videos.forEach(video => video.referenceDom.classList.add(DOMUpdater.markingClassName));
   },
+
+  hideDetectedVideos: (videos: typeExtensionVideoData[]) => {
+    // New method to hide videos
+    videos.forEach(video => video.referenceDom.classList.add(DOMUpdater.hidingClassName));
+  },
+
+  showDetectedVideos: (videos: typeExtensionVideoData[]) => {
+    // New method to show videos
+    videos.forEach(video => video.referenceDom.classList.remove(DOMUpdater.hidingClassName));
+  },
 };
 
 // Initialize the extension
 const init = async () => {
+  let youTubeChangeDetectorInstance: YouTubeChangeDetector | null = null;
   let allDetectedVideos: typeExtensionVideoData[] = [];
   const tabId = await getCurrentTabId();
   let extensionStorageData: typeExtensionStorageData | null = await extensionStorage.get();
 
   const handleOnClickAddToBlocklist = async (clickedVideo: typeExtensionVideoData) => {
-    console.log('Clicked video => ', { clickedVideo });
-
     // Get current list mode
     const currentListMode = extensionStorageData?.listMode ?? EnumExtensionStorageListMode.DISABLED;
 
@@ -107,9 +116,11 @@ const init = async () => {
   // YouTube content change handler
   const handleContentChange = (videos: typeExtensionVideoData[], url: string) => {
     blockedVideosByTabStorage.updateIsProcessing(tabId, true);
-    console.log('Detected videos => ', videos);
+    // Hide all detected videos initially
+    if (extensionStorageData?.listMode !== EnumExtensionStorageListMode.DISABLED) {
+      DOMUpdater.hideDetectedVideos(videos);
+    }
     const filteredVideos = VideoFilter.filterByType(videos, extensionStorageData!);
-    console.log('Filtered videos => ', videos);
     allDetectedVideos = filteredVideos;
     sendFilterRequestToBackground(tabId, filteredVideos);
   };
@@ -117,25 +128,54 @@ const init = async () => {
   // Subscribe to blacklist updates
   const subscribeToBlacklistUpdates = () => {
     blockedVideosByTabStorage.subscribe(async () => {
-      const { blacklisted } = (await blockedVideosByTabStorage.get()).tabs[tabId] || { blacklisted: [] };
+      const tabData = (await blockedVideosByTabStorage.get()).tabs[tabId];
+      const { blacklisted, isProcessing } = (await blockedVideosByTabStorage.get()).tabs[tabId] || {
+        blacklisted: [],
+        isProcessing: false,
+      };
 
-      console.log('BLACKLISTED 1 => ', blacklisted);
+      console.log('BLACKLISTED 1 => ', { blacklisted, tabData });
+
+      // If the list mode is DISABLED, show all videos
+      if (extensionStorageData?.listMode === EnumExtensionStorageListMode.DISABLED) {
+        DOMUpdater.showDetectedVideos(allDetectedVideos);
+        return; // Skip further filtering
+      }
 
       const filteredVideos = VideoFilter.filterByBlacklist(allDetectedVideos, blacklisted, extensionStorageData!);
 
       DOMUpdater.clearBlockedClasses();
       DOMUpdater.updateBlockedClasses(filteredVideos);
+
+      if (isProcessing && extensionStorageData?.listMode !== EnumExtensionStorageListMode.DISABLED) {
+        DOMUpdater.hideDetectedVideos(allDetectedVideos);
+      } else {
+        // Show non-blacklisted videos
+        const nonBlacklistedVideos = allDetectedVideos.filter(
+          video => !filteredVideos.some(filtered => filtered.videoId === video.videoId),
+        );
+        DOMUpdater.showDetectedVideos(nonBlacklistedVideos);
+      }
     });
   };
 
+  // Initialize content detector
+  youTubeChangeDetectorInstance = new YouTubeChangeDetector(handleContentChange, handleOnClickAddToBlocklist);
+
   // Subscribe to extension storage updates
   extensionStorage.subscribe(async () => {
+    console.log('CON1: Changes detected...');
     extensionStorageData = await extensionStorage.get();
-    location.reload();
+    // location.reload();
+    if (youTubeChangeDetectorInstance) {
+      console.log('CON1: Send signal to change detector...', { extensionStorageData });
+      DOMUpdater.clearBlockedClasses();
+      await blockedVideosByTabStorage.clearTabBlacklist(tabId);
+      youTubeChangeDetectorInstance?.searchAndFilter(true);
+    } else {
+      console.log('CON1: Not yet initialise the change detector...');
+    }
   });
-
-  // Initialize content detector
-  new YouTubeChangeDetector(handleContentChange, handleOnClickAddToBlocklist);
 
   // Subscribe to updates
   subscribeToBlacklistUpdates();

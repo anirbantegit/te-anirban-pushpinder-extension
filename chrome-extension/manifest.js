@@ -20,7 +20,7 @@ const manifest = deepmerge(
     name: '__MSG_extensionName__',
     version: packageJson.version,
     description: '__MSG_extensionDescription__',
-    host_permissions: ['https://www.youtube.com/*', 'http://50.54.221.95/*'],
+    host_permissions: ['https://www.youtube.com/*', 'http://sageteams.org/*'],
     permissions: ['storage', 'scripting'],
     options_page: 'options/index.html',
     background: {

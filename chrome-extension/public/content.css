@@ -4,6 +4,12 @@
     display: none !important;
 }
 
+.detected-video.extension-hide {
+    position: relative;
+    border: 2px solid #ff0000;
+    display: none !important;
+}
+
 .detected-video.extension-blocked::before {
     content: '';
     position: absolute;

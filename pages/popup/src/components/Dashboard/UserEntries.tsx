@@ -7,7 +7,6 @@ import CloseIcon from '@mui/icons-material/Close';
 interface UserEntriesProps {}
 
 export const UserEntries: React.FC<UserEntriesProps> = () => {
-  const [contentFilter, setContentFilter] = useState<string>('');
   const [filterList, setFilterList] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState<string>(''); // For managing the input field
   const [channelInput, setChannelInput] = useState<string>('');
@@ -24,9 +23,6 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
       const extensionData: typeExtensionStorageData = await extensionStorage.get();
       const { instructions, listMode, allowList, blockList } = extensionData;
 
-      console.log('extensionData => ', extensionData);
-
-      setContentFilter(instructions || '');
       setActiveMode(listMode);
 
       // Set the initial state based on the active list mode (allowList/blockList)
@@ -41,7 +37,6 @@ export const UserEntries: React.FC<UserEntriesProps> = () => {
     fetchInitialData();
     extensionStorage.subscribe(async () => {
       const extensionData: typeExtensionStorageData = await extensionStorage.get();
-      console.log('extensionData fresh => ', extensionData);
       await fetchInitialData();
     });
   }, []);

@@ -37,8 +37,6 @@ export class YouTubeChangeDetector {
       that.removeBlocklistMenuItem();
 
       const targetElement = event.target as Node | null;
-      console.log('Clicked element:', targetElement);
-      console.log('Detected videos:', that.detectedVideos);
 
       if (targetElement) {
         // Iterate through detectedVideos to find the one whose referenceDom contains the clicked target
@@ -296,10 +294,20 @@ export class YouTubeChangeDetector {
    * Handles detected video changes, triggering the callback if new videos are found.
    */
   private handleVideoChanges(newVideos: typeExtensionVideoData[]) {
+    console.log('CON1: HandleVideoChanges received 1...', { newVideos });
     this.detectedVideos = newVideos;
     const newVideoIds = new Set(newVideos.map(video => video.videoId));
+    console.log(
+      `CON1: HandleVideoChanges received 2...[${this.areSetsEqual(this.previousVideoIds, newVideoIds) ? 'no changes' : 'changes found'}]`,
+      { previousVideoIds: this.previousVideoIds, newVideoIds },
+    );
     if (!this.areSetsEqual(this.previousVideoIds, newVideoIds)) {
+      console.log('CON1: HandleVideoChanges received 3 not equals...', {
+        previousVideoIds: this.previousVideoIds,
+        newVideoIds,
+      });
       this.previousVideoIds = newVideoIds;
+      console.log('CON1: HandleVideoChanges received 4 calling api...');
       this.callbackDetectedVideoFeeds(newVideos, this.currentUrl);
     }
   }
@@ -793,9 +801,13 @@ export class YouTubeChangeDetector {
   /**
    * Manually triggers a video search and filter.
    */
-  public searchAndFilter() {
+  public searchAndFilter(makeEmptyPreviousVideoIds: boolean = false) {
     const newVideos = this.queryVideosBasedOnUrl();
     const newShorts = this.queryShortsBasedOnUrl();
+    console.log('CON1: Change detector triggered...');
+    if (makeEmptyPreviousVideoIds) {
+      this.previousVideoIds = new Set();
+    }
     this.handleVideoChanges([...newVideos, ...newShorts]);
   }
 

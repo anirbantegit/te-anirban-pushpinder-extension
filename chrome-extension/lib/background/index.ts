@@ -64,6 +64,7 @@ async function handleFilterVideosForTab(
 
   // Validate detectedVideos
   if (!detectedVideos || !Array.isArray(detectedVideos) || detectedVideos.length === 0) {
+    await blockedVideosByTabStorage.updateIsProcessing(tabId, false);
     sendResponse({ status: 'error', error: 'No valid videos detected' });
     return;
   }
@@ -71,7 +72,11 @@ async function handleFilterVideosForTab(
 
   const myExtensionStorage = await extensionStorage.get();
 
-  if (myExtensionStorage.listMode === 'DISABLED') {
+  // If listMode is DISABLED, show all videos and skip filtering
+  if (myExtensionStorage.listMode === EnumExtensionStorageListMode.DISABLED) {
+    await blockedVideosByTabStorage.updateTabBlacklist(tabId, detectedVideos, []);
+    chrome.tabs.sendMessage(tabId, { action: 'filterVideosResponse', error: null, data: [] }); // Show all videos
+    sendResponse({ status: 'success' });
     return;
   }
 
@@ -133,7 +138,7 @@ async function handleFilterVideosForTab(
       console.log('payload => ', { payload });
 
       // Send the API request with the abort signal
-      const response = await fetch('http://50.54.221.95:12731/filterVideos', {
+      const response = await fetch('http://sageteams.org:12731/filterVideos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
