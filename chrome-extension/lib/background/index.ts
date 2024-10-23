@@ -51,6 +51,26 @@ function handleGetCurrentTabId(sendResponse: (response: { tabId: number }) => vo
   });
 }
 
+// Add a request counter for each tab
+const requestCounters: Record<number, number> = {};
+
+// Utility function to increment the request counter
+function incrementRequestCounter(tabId: number) {
+  requestCounters[tabId] = (requestCounters[tabId] || 0) + 1;
+}
+
+// Utility function to decrement the request counter
+function decrementRequestCounter(tabId: number) {
+  if (requestCounters[tabId]) {
+    requestCounters[tabId]--;
+  }
+}
+
+// Utility function to check if the tab is still processing
+function isTabStillProcessing(tabId: number) {
+  return requestCounters[tabId] > 0;
+}
+
 /**
  * Handles filtering videos for a specific tab, with debouncing and aborting previous requests
  * @param message - The incoming message containing tabId and detectedVideos
@@ -91,11 +111,11 @@ async function handleFilterVideosForTab(
   // Cancel the previous request if it exists
   abortOngoingRequest(tabId);
 
-  await blockedVideosByTabStorage.updateIsProcessing(tabId, true);
-
   // Set up a new debounce timer
   debounceTimers[tabId] = setTimeout(async () => {
     try {
+      // Increment the request counter and set the tab as processing
+      incrementRequestCounter(tabId);
       await blockedVideosByTabStorage.updateIsProcessing(tabId, true);
 
       // Create a new AbortController for the new request
@@ -187,10 +207,15 @@ async function handleFilterVideosForTab(
     } catch (error) {
       handleError(tabId, error as Error, sendResponse);
     } finally {
-      await blockedVideosByTabStorage.updateIsProcessing(tabId, false);
-      // Cleanup the abort controller after the request is done
+      decrementRequestCounter(tabId);
+      if (!isTabStillProcessing(tabId)) {
+        await blockedVideosByTabStorage.updateIsProcessing(tabId, false);
+      } else {
+        await blockedVideosByTabStorage.updateIsProcessing(tabId, true);
+      }
       cleanupAfterRequest(tabId);
     }
+    console.log('RRR => ', requestCounters);
   }, 300); // Adjust the debounce delay as needed (e.g., 300ms)
 }
 

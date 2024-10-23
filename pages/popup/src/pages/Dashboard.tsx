@@ -90,15 +90,26 @@ export const Dashboard = () => {
   const [tabId, setTabId] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isDetecting, setIsDetecting] = useState<boolean>(false);
-  const [activeMode, setActiveMode] = useState<EnumExtensionStorageListMode>(EnumExtensionStorageListMode.BLOCK_LIST);
+  const [activeMode, setActiveMode] = useState<EnumExtensionStorageListMode>(EnumExtensionStorageListMode.DISABLED);
+
+  const syncWithExtensionData = async () => {
+    const data: typeExtensionStorageData = await extensionStorage.get();
+    setActiveMode(data.listMode ?? EnumExtensionStorageListMode.DISABLED);
+  };
 
   useEffect(() => {
-    const fetchTabId = async () => {
+    (async () => {
       const id = await getCurrentTabId();
       setTabId(id);
+    })();
+
+    syncWithExtensionData().finally();
+    const unsubscribeExtensionStorage = extensionStorage.subscribe(syncWithExtensionData);
+    const unsubscribe = () => {
+      unsubscribeExtensionStorage();
     };
 
-    fetchTabId();
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -114,20 +125,11 @@ export const Dashboard = () => {
         }
       };
 
-      const syncWithExtensionData = async () => {
-        const data: typeExtensionStorageData = await extensionStorage.get();
-        setActiveMode(data.listMode ?? EnumExtensionStorageListMode.DISABLED);
-      };
-
       fetchBlockedVideos().finally();
       const unsubscribeBlockedVideosByTabStorage = blockedVideosByTabStorage.subscribe(fetchBlockedVideos);
 
-      syncWithExtensionData().finally();
-      const unsubscribeExtensionStorage = extensionStorage.subscribe(syncWithExtensionData);
-
       const unsubscribe = () => {
         unsubscribeBlockedVideosByTabStorage();
-        unsubscribeExtensionStorage();
       };
 
       return () => unsubscribe();
@@ -160,6 +162,21 @@ export const Dashboard = () => {
     [setActiveAccordion],
   );
 
+  const shouldShowBlockedShorts = useMemo(
+    () => !(!isProcessing && filteredBlockedShorts.length <= 0),
+    [isProcessing, filteredBlockedShorts],
+  );
+
+  const shouldShowBlockedPlaylist = useMemo(
+    () => !(!isProcessing && filteredBlockedPlaylist.length <= 0),
+    [isProcessing, filteredBlockedPlaylist],
+  );
+
+  const shouldShowBlockedVideos = useMemo(
+    () => !(!isProcessing && filteredBlockedVideos.length <= 0),
+    [isProcessing, filteredBlockedVideos],
+  );
+
   return (
     <PopupLayout>
       <div className="flex flex-col space-y-3">
@@ -168,7 +185,7 @@ export const Dashboard = () => {
         {!isDisabled && (
           <Fragment>
             {/* Blocked Shorts */}
-            {filteredBlockedShorts.length > 0 && (
+            {shouldShowBlockedShorts && (
               <BlockedSection
                 title="Shorts"
                 isProcessing={isProcessing}
@@ -182,12 +199,12 @@ export const Dashboard = () => {
             )}
 
             {/* Blocked Playlists */}
-            {filteredBlockedPlaylist.length > 0 && (
+            {shouldShowBlockedPlaylist && (
               <BlockedSection
                 title="Playlist"
                 isProcessing={isProcessing}
                 isDetecting={isDetecting}
-                blockedCount={filteredBlockedPlaylist.length}
+                blockedCount={filteredBlockedPlaylist.length ?? 0}
                 detectedCount={detectedVideos.filter(video => video.videoType === 'playlist').length}
                 videos={filteredBlockedPlaylist}
                 accordian={activeAccordion === 'playlist'}
@@ -196,12 +213,12 @@ export const Dashboard = () => {
             )}
 
             {/* Blocked Videos */}
-            {filteredBlockedVideos.length > 0 && (
+            {shouldShowBlockedVideos && (
               <BlockedSection
                 title="Videos"
                 isProcessing={isProcessing}
                 isDetecting={isDetecting}
-                blockedCount={filteredBlockedVideos.length}
+                blockedCount={filteredBlockedVideos.length ?? 0}
                 detectedCount={detectedVideos.filter(video => video.videoType === 'video').length}
                 videos={filteredBlockedVideos}
                 accordian={activeAccordion === 'videos'}

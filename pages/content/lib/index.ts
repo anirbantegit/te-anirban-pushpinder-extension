@@ -2,6 +2,19 @@ import { YouTubeChangeDetector } from './YouTubeChangeDetector';
 import type { IBlockedVideoDetails, typeExtensionStorageData, typeExtensionVideoData } from '@extension/storage';
 import { blockedVideosByTabStorage, EnumExtensionStorageListMode, extensionStorage } from '@extension/storage';
 
+// Helper function for debounce effect
+function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
+  let timeout: ReturnType<typeof setTimeout> | null;
+  return function (this: ThisParameterType<T>, ...args: Parameters<T>) {
+    const later = () => {
+      timeout = null;
+      func.apply(this, args as Parameters<T>); // Ensure correct parameter types
+    };
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
 // Helper function to get the current tab ID
 const getCurrentTabId = async (): Promise<number> => {
   return new Promise<number>((resolve, reject) => {
@@ -127,36 +140,38 @@ const init = async () => {
 
   // Subscribe to blacklist updates
   const subscribeToBlacklistUpdates = () => {
-    blockedVideosByTabStorage.subscribe(async () => {
-      const tabData = (await blockedVideosByTabStorage.get()).tabs[tabId];
-      const { blacklisted, isProcessing } = (await blockedVideosByTabStorage.get()).tabs[tabId] || {
-        blacklisted: [],
-        isProcessing: false,
-      };
+    blockedVideosByTabStorage.subscribe(
+      debounce(async () => {
+        const tabData = (await blockedVideosByTabStorage.get()).tabs[tabId];
+        const { blacklisted, isProcessing } = (await blockedVideosByTabStorage.get()).tabs[tabId] || {
+          blacklisted: [],
+          isProcessing: false,
+        };
 
-      console.log('BLACKLISTED 1 => ', { blacklisted, tabData });
+        console.log('BLACKLISTED 1 => ', { isProcessing, blacklisted, tabData });
 
-      // If the list mode is DISABLED, show all videos
-      if (extensionStorageData?.listMode === EnumExtensionStorageListMode.DISABLED) {
-        DOMUpdater.showDetectedVideos(allDetectedVideos);
-        return; // Skip further filtering
-      }
+        // If the list mode is DISABLED, show all videos
+        if (extensionStorageData?.listMode === EnumExtensionStorageListMode.DISABLED) {
+          DOMUpdater.showDetectedVideos(allDetectedVideos);
+          return; // Skip further filtering
+        }
 
-      const filteredVideos = VideoFilter.filterByBlacklist(allDetectedVideos, blacklisted, extensionStorageData!);
+        const filteredVideos = VideoFilter.filterByBlacklist(allDetectedVideos, blacklisted, extensionStorageData!);
 
-      DOMUpdater.clearBlockedClasses();
-      DOMUpdater.updateBlockedClasses(filteredVideos);
+        DOMUpdater.clearBlockedClasses();
+        DOMUpdater.updateBlockedClasses(filteredVideos);
 
-      if (isProcessing && extensionStorageData?.listMode !== EnumExtensionStorageListMode.DISABLED) {
-        DOMUpdater.hideDetectedVideos(allDetectedVideos);
-      } else {
-        // Show non-blacklisted videos
-        const nonBlacklistedVideos = allDetectedVideos.filter(
-          video => !filteredVideos.some(filtered => filtered.videoId === video.videoId),
-        );
-        DOMUpdater.showDetectedVideos(nonBlacklistedVideos);
-      }
-    });
+        if (isProcessing && extensionStorageData?.listMode !== EnumExtensionStorageListMode.DISABLED) {
+          DOMUpdater.hideDetectedVideos(allDetectedVideos);
+        } else {
+          // Show non-blacklisted videos
+          const nonBlacklistedVideos = allDetectedVideos.filter(
+            video => !filteredVideos.some(filtered => filtered.videoId === video.videoId),
+          );
+          DOMUpdater.showDetectedVideos(nonBlacklistedVideos);
+        }
+      }, 300),
+    );
   };
 
   // Initialize content detector
