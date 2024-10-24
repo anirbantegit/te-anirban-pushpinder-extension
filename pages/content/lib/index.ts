@@ -60,12 +60,18 @@ const VideoFilter = {
 
     const channelBlacklist = currentList.channelBlockList || [];
 
+    // Create a Set of blacklisted video IDs and channels to optimize filtering
+    const blacklistedVideoIds = new Set(blacklistedVideos.map(bv => bv.videoId));
+    const blacklistedChannels = new Set(channelBlacklist);
+
     return allDetectedVideos.filter(video => {
-      return (
-        blacklistedVideos.some(bv => bv.videoId === video.videoId) ||
-        (video.channelId && channelBlacklist.includes(video.channelId)) ||
-        (video.channel && channelBlacklist.includes(video.channel))
-      );
+      const isVideoBlacklisted = blacklistedVideoIds.has(video.videoId);
+      const isChannelBlacklisted =
+        (video.channelId && blacklistedChannels.has(video.channelId)) ||
+        (video.channel && blacklistedChannels.has(video.channel));
+
+      // Return true for filtering if either the video ID or channel is blacklisted
+      return isVideoBlacklisted || isChannelBlacklisted;
     });
   },
 };
@@ -128,6 +134,7 @@ const init = async () => {
 
   // YouTube content change handler
   const handleContentChange = (videos: typeExtensionVideoData[], url: string) => {
+    console.log('VID => ', { videos });
     blockedVideosByTabStorage.updateIsProcessing(tabId, true);
     // Hide all detected videos initially
     if (extensionStorageData?.listMode !== EnumExtensionStorageListMode.DISABLED) {
@@ -161,7 +168,10 @@ const init = async () => {
         DOMUpdater.clearBlockedClasses();
         DOMUpdater.updateBlockedClasses(filteredVideos);
 
-        if (isProcessing && extensionStorageData?.listMode !== EnumExtensionStorageListMode.DISABLED) {
+        if (
+          (isProcessing && extensionStorageData?.listMode === EnumExtensionStorageListMode.BLOCK_LIST) ||
+          extensionStorageData?.listMode === EnumExtensionStorageListMode.ALLOW_LIST
+        ) {
           DOMUpdater.hideDetectedVideos(allDetectedVideos);
         } else {
           // Show non-blacklisted videos

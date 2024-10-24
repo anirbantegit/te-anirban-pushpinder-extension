@@ -231,14 +231,74 @@ export class YouTubeChangeDetector {
   };
 
   /**
+   * Queries and fetches endscreen videos that appear when a video ends.
+   */
+  private queryEndScreenVideos(): typeExtensionVideoData[] {
+    const endscreenContainer = document.querySelector('div.html5-endscreen div.ytp-endscreen-content');
+    const videoIdRegex = /\/watch\?v=([a-zA-Z0-9_-]{11})/;
+
+    if (!endscreenContainer) return [];
+
+    const suggestionAnchors = endscreenContainer.querySelectorAll('a.ytp-suggestion-set');
+
+    return Array.from(suggestionAnchors)
+      .map((anchor: HTMLAnchorElement) => {
+        const href = anchor?.href ?? '';
+        const videoIdMatch = href.match(videoIdRegex);
+
+        if (videoIdMatch) {
+          const videoId: string = videoIdMatch[1];
+          const titleElement = anchor.querySelector('span.ytp-videowall-still-info-title');
+          const title: string = titleElement?.textContent?.replace('&nbsp;', ' ').trim() || '';
+          const thumbnail: string = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+
+          // Fetch channel and views
+          const infoElement = anchor.querySelector('span.ytp-videowall-still-info-author');
+          let channel: string | null = null;
+          let views: string | null = null;
+
+          if (infoElement) {
+            const infoText = infoElement.textContent?.trim() || '';
+            if (infoText.includes(' • ')) {
+              const [channelName, viewsText] = infoText.split(' • ').map(item => item.trim());
+              if (channelName) channel = channelName;
+              if (viewsText) views = viewsText;
+            }
+          }
+
+          const videoData: typeExtensionVideoData = {
+            videoId,
+            title,
+            thumbnail,
+            videoType: 'video',
+            channel,
+            channelId: null,
+            views: views || '',
+            referenceDom: anchor as HTMLElement,
+            type: 'sidebar',
+          };
+
+          videoData.referenceDom.classList.add('detected-video');
+          return videoData;
+        }
+
+        return null;
+      })
+      .filter(item => item !== null) as typeExtensionVideoData[];
+  }
+
+  /**
    * Handles DOM mutations, filtering and detecting video changes.
    */
   private onMutation() {
     const newVideos = this.queryVideosBasedOnUrl();
     const newShorts = this.queryShortsBasedOnUrl();
     const newPlaylists = this.queryPlaylistBasedOnUrl();
+    const newEndScreenVideos = this.queryEndScreenVideos();
 
-    const combinedArray = [...newVideos, ...newShorts, ...newPlaylists];
+    console.log('newEndScreenVideos => ', { newEndScreenVideos });
+
+    const combinedArray = [...newVideos, ...newShorts, ...newPlaylists, ...newEndScreenVideos];
 
     const prioritizeVideoTypes = (arr: typeExtensionVideoData[]) => {
       const priorityMap = { video: 1, short: 2, playlist: 3 };
@@ -294,20 +354,10 @@ export class YouTubeChangeDetector {
    * Handles detected video changes, triggering the callback if new videos are found.
    */
   private handleVideoChanges(newVideos: typeExtensionVideoData[]) {
-    console.log('CON1: HandleVideoChanges received 1...', { newVideos });
     this.detectedVideos = newVideos;
     const newVideoIds = new Set(newVideos.map(video => video.videoId));
-    console.log(
-      `CON1: HandleVideoChanges received 2...[${this.areSetsEqual(this.previousVideoIds, newVideoIds) ? 'no changes' : 'changes found'}]`,
-      { previousVideoIds: this.previousVideoIds, newVideoIds },
-    );
     if (!this.areSetsEqual(this.previousVideoIds, newVideoIds)) {
-      console.log('CON1: HandleVideoChanges received 3 not equals...', {
-        previousVideoIds: this.previousVideoIds,
-        newVideoIds,
-      });
       this.previousVideoIds = newVideoIds;
-      console.log('CON1: HandleVideoChanges received 4 calling api...');
       this.callbackDetectedVideoFeeds(newVideos, this.currentUrl);
     }
   }
