@@ -148,7 +148,6 @@ const init = async () => {
   const subscribeToBlacklistUpdates = () => {
     blockedVideosByTabStorage.subscribe(
       debounce(async () => {
-        const tabData = (await blockedVideosByTabStorage.get()).tabs[tabId];
         const { blacklisted, isProcessing } = (await blockedVideosByTabStorage.get()).tabs[tabId] || {
           blacklisted: [],
           isProcessing: false,
