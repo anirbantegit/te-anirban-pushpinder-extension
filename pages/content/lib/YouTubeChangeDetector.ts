@@ -42,15 +42,12 @@ export class YouTubeChangeDetector {
         // Iterate through detectedVideos to find the one whose referenceDom contains the clicked target
         for (const video of that.detectedVideos) {
           if (video.referenceDom && video.referenceDom.contains(targetElement)) {
-            console.log('Match found in detected video:', video);
-
             // Ensure the video has a channelId
             if (video.channelId || video.channel) {
               that.contextMenu = await that.getContextMenuIfOpened();
               if (that.contextMenu) {
                 that.addToBlocklistMenuItem(that.contextMenu);
               }
-              console.log('Click is inside detected video:', video);
               that.clickedVideo = video;
               return video; // Return the detected video object or perform your action here
             }
@@ -213,7 +210,6 @@ export class YouTubeChangeDetector {
     blocklistItem.addEventListener('click', () => {
       // Perform block action here
       if (that.clickedVideo) {
-        console.log('Added to Blocklist');
         that.callbackAddToBlacklistClick(that.clickedVideo);
       }
       document.body.click();
@@ -242,8 +238,8 @@ export class YouTubeChangeDetector {
     const suggestionAnchors = endscreenContainer.querySelectorAll('a.ytp-suggestion-set');
 
     return Array.from(suggestionAnchors)
-      .map((anchor: HTMLAnchorElement) => {
-        const href = anchor?.href ?? '';
+      .map((anchor: Element) => {
+        const href = (anchor as HTMLAnchorElement)?.href ?? '';
         const videoIdMatch = href.match(videoIdRegex);
 
         if (videoIdMatch) {
@@ -275,7 +271,7 @@ export class YouTubeChangeDetector {
             channelId: null,
             views: views || '',
             referenceDom: anchor as HTMLElement,
-            type: 'sidebar',
+            type: 'after_watch_suggestions',
           };
 
           videoData.referenceDom.classList.add('detected-video');
@@ -296,12 +292,10 @@ export class YouTubeChangeDetector {
     const newPlaylists = this.queryPlaylistBasedOnUrl();
     const newEndScreenVideos = this.queryEndScreenVideos();
 
-    console.log('newEndScreenVideos => ', { newEndScreenVideos });
-
     const combinedArray = [...newVideos, ...newShorts, ...newPlaylists, ...newEndScreenVideos];
 
     const prioritizeVideoTypes = (arr: typeExtensionVideoData[]) => {
-      const priorityMap = { video: 1, short: 2, playlist: 3 };
+      const priorityMap = { video: 1, short: 2, playlist: 3, after_watch_suggestions: 4 };
 
       const groupedById = arr.reduce((acc, curr) => {
         const { videoId } = curr;
@@ -356,7 +350,7 @@ export class YouTubeChangeDetector {
   private handleVideoChanges(newVideos: typeExtensionVideoData[]) {
     this.detectedVideos = newVideos;
     const newVideoIds = new Set(newVideos.map(video => video.videoId));
-    if (!this.areSetsEqual(this.previousVideoIds, newVideoIds)) {
+    if (!this.areSetsEqual(this.previousVideoIds, newVideoIds, this.detectedVideos, newVideos)) {
       this.previousVideoIds = newVideoIds;
       this.callbackDetectedVideoFeeds(newVideos, this.currentUrl);
     }
@@ -838,12 +832,37 @@ export class YouTubeChangeDetector {
   }
 
   /**
-   * Checks if two sets of video IDs are equal.
+   * Creates a map of videoId and type counts.
    */
-  private areSetsEqual(set1: Set<string>, set2: Set<string>): boolean {
+  private getVideoTypeMap(videos: typeExtensionVideoData[]): Map<string, Map<string, number>> {
+    const map = new Map<string, Map<string, number>>();
+    for (const video of videos) {
+      if (!map.has(video.videoId)) {
+        map.set(video.videoId, new Map());
+      }
+      const typeCountMap = map.get(video.videoId)!;
+      typeCountMap.set(video.videoType, (typeCountMap.get(video.videoType) || 0) + 1);
+    }
+    return map;
+  }
+
+  /**
+   * Checks if two sets of video IDs and types are equal.
+   */
+  private areSetsEqual(
+    set1: Set<string>,
+    set2: Set<string>,
+    videos1: typeExtensionVideoData[],
+    videos2: typeExtensionVideoData[],
+  ): boolean {
     if (set1.size !== set2.size) return false;
-    for (const item of set1) {
-      if (!set2.has(item)) return false;
+
+    const videoMap1 = this.getVideoTypeMap(videos1);
+    const videoMap2 = this.getVideoTypeMap(videos2);
+
+    for (const [key, typeCount1] of videoMap1.entries()) {
+      const typeCount2 = videoMap2.get(key);
+      if (!typeCount2 || typeCount1 !== typeCount2) return false;
     }
     return true;
   }
@@ -854,7 +873,6 @@ export class YouTubeChangeDetector {
   public searchAndFilter(makeEmptyPreviousVideoIds: boolean = false) {
     const newVideos = this.queryVideosBasedOnUrl();
     const newShorts = this.queryShortsBasedOnUrl();
-    console.log('CON1: Change detector triggered...');
     if (makeEmptyPreviousVideoIds) {
       this.previousVideoIds = new Set();
     }

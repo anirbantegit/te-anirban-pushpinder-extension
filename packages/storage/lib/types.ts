@@ -71,7 +71,7 @@ export type typeExtensionVideoData = {
   views: string;
   referenceDom: HTMLElement;
   videoType: string;
-  type: 'homepage' | 'sidebar' | 'search';
+  type: 'homepage' | 'sidebar' | 'search' | 'after_watch_suggestions';
 };
 
 export interface IBlockedVideoDetails {

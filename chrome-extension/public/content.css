@@ -1,13 +1,13 @@
 .detected-video.extension-blocked {
     position: relative;
-    border: 2px solid #ff0000;
+    /*border: 2px solid #ff0000;*/
     display: none !important;
 }
 
 .detected-video.extension-hide {
     position: relative;
     /*border: 2px solid #0022ff;*/
-    display: none !important;
+    /*display: none !important;*/
 }
 
 .detected-video.extension-blocked::before {

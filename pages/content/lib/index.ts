@@ -134,7 +134,6 @@ const init = async () => {
 
   // YouTube content change handler
   const handleContentChange = (videos: typeExtensionVideoData[], url: string) => {
-    console.log('VID => ', { videos });
     blockedVideosByTabStorage.updateIsProcessing(tabId, true);
     // Hide all detected videos initially
     if (extensionStorageData?.listMode !== EnumExtensionStorageListMode.DISABLED) {
@@ -155,8 +154,6 @@ const init = async () => {
           isProcessing: false,
         };
 
-        console.log('BLACKLISTED 1 => ', { isProcessing, blacklisted, tabData });
-
         // If the list mode is DISABLED, show all videos
         if (extensionStorageData?.listMode === EnumExtensionStorageListMode.DISABLED) {
           DOMUpdater.showDetectedVideos(allDetectedVideos);
@@ -164,6 +161,8 @@ const init = async () => {
         }
 
         const filteredVideos = VideoFilter.filterByBlacklist(allDetectedVideos, blacklisted, extensionStorageData!);
+
+        console.log('filteredVideos => ', { blacklisted, allDetectedVideos, filteredVideos });
 
         DOMUpdater.clearBlockedClasses();
         DOMUpdater.updateBlockedClasses(filteredVideos);
@@ -189,11 +188,9 @@ const init = async () => {
 
   // Subscribe to extension storage updates
   extensionStorage.subscribe(async () => {
-    console.log('CON1: Changes detected...');
     extensionStorageData = await extensionStorage.get();
     // location.reload();
     if (youTubeChangeDetectorInstance) {
-      console.log('CON1: Send signal to change detector...', { extensionStorageData });
       DOMUpdater.clearBlockedClasses();
       await blockedVideosByTabStorage.clearTabBlacklist(tabId);
       youTubeChangeDetectorInstance?.searchAndFilter(true);
