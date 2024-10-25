@@ -349,9 +349,12 @@ export class YouTubeChangeDetector {
    */
   private handleVideoChanges(newVideos: typeExtensionVideoData[]) {
     this.detectedVideos = newVideos;
-    const newVideoIds = new Set(newVideos.map(video => video.videoId));
-    if (!this.areSetsEqual(this.previousVideoIds, newVideoIds, this.detectedVideos, newVideos)) {
-      this.previousVideoIds = newVideoIds;
+    // Create Set of `videoId-videoType` for new videos
+    const newVideoTypeSet = new Set(newVideos.map(video => `${video.videoId}-${video.videoType}`));
+
+    // Compare with previousVideoIds to check for any new or changed entries
+    if (!this.areSetsEqual(this.previousVideoIds, newVideoTypeSet)) {
+      this.previousVideoIds = newVideoTypeSet; // Update previousVideoIds to the latest set
       this.callbackDetectedVideoFeeds(newVideos, this.currentUrl);
     }
   }
@@ -832,37 +835,12 @@ export class YouTubeChangeDetector {
   }
 
   /**
-   * Creates a map of videoId and type counts.
+   * Compares two sets of combined `videoId` and `videoType` keys.
    */
-  private getVideoTypeMap(videos: typeExtensionVideoData[]): Map<string, Map<string, number>> {
-    const map = new Map<string, Map<string, number>>();
-    for (const video of videos) {
-      if (!map.has(video.videoId)) {
-        map.set(video.videoId, new Map());
-      }
-      const typeCountMap = map.get(video.videoId)!;
-      typeCountMap.set(video.videoType, (typeCountMap.get(video.videoType) || 0) + 1);
-    }
-    return map;
-  }
-
-  /**
-   * Checks if two sets of video IDs and types are equal.
-   */
-  private areSetsEqual(
-    set1: Set<string>,
-    set2: Set<string>,
-    videos1: typeExtensionVideoData[],
-    videos2: typeExtensionVideoData[],
-  ): boolean {
+  private areSetsEqual(set1: Set<string>, set2: Set<string>): boolean {
     if (set1.size !== set2.size) return false;
-
-    const videoMap1 = this.getVideoTypeMap(videos1);
-    const videoMap2 = this.getVideoTypeMap(videos2);
-
-    for (const [key, typeCount1] of videoMap1.entries()) {
-      const typeCount2 = videoMap2.get(key);
-      if (!typeCount2 || typeCount1 !== typeCount2) return false;
+    for (const item of set1) {
+      if (!set2.has(item)) return false;
     }
     return true;
   }
