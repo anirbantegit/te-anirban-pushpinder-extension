@@ -4,37 +4,21 @@
   "globalEnv": ["__FIREFOX__"],
   "tasks": {
     "ready": {
-      "outputs": [
-        "dist/**",
-        "build/**"
-      ]
+      "dependsOn": ["^ready"],
+      "outputs": ["dist/**", "build/**"]
     },
     "dev": {
-      "dependsOn": [
-        "ready"
-      ],
-      "outputs": [
-        "dist/**",
-        "build/**",
-        "i18n/locales/**"
-      ],
+      "dependsOn": ["ready"],
+      "outputs": ["dist/**", "build/**", "i18n/locales/**"],
+      "cache": false,
       "persistent": true
     },
     "build": {
-      "dependsOn": [
-        "^build",
-        "ready"
-      ],
-      "outputs": [
-        "../../dist/**",
-        "dist/**",
-        "build/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["../../dist/**", "dist/**", "build/**"],
+      "cache": false
     },
-    "zip": {
-      "dependsOn": [
-        "build"
-      ],
+    "e2e": {
       "cache": false
     },
     "type-check": {
@@ -49,14 +33,20 @@
     "prettier": {
       "cache": false
     },
-    "test": {
-      "dependsOn": [
-        "^test",
-        "^build"
-      ],
+    "clean:node_modules": {
+      "dependsOn": ["^clean:node_modules"],
+      "cache": false
+    },
+    "clean:turbo": {
+      "dependsOn": ["^clean:turbo"],
+      "cache": false
+    },
+    "clean:bundle": {
+      "dependsOn": ["^clean:bundle"],
       "cache": false
     },
     "clean": {
+      "dependsOn": ["^clean"],
       "cache": false
     }
   }

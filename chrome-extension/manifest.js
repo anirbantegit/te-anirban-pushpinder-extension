@@ -29,10 +29,10 @@ const manifest = deepmerge(
     },
     action: {
       default_popup: 'popup/index.html',
-      default_icon: 'icon-34-new.png',
+      default_icon: 'icon-34.png',
     },
     icons: {
-      128: 'icon-128-new.png',
+      128: 'icon-128.png',
     },
     content_scripts: [
       {

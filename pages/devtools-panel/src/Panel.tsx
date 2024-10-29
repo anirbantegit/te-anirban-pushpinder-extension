@@ -1,17 +1,21 @@
 import '@src/Panel.css';
-import { useStorageSuspense, withErrorBoundary, withSuspense } from '@extension/shared';
+import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
 import { exampleThemeStorage } from '@extension/storage';
 import type { ComponentPropsWithoutRef } from 'react';
 
 const Panel = () => {
-  const theme = useStorageSuspense(exampleThemeStorage);
+  const theme = useStorage(exampleThemeStorage);
   const isLight = theme === 'light';
   const logo = isLight ? 'devtools-panel/logo_horizontal.svg' : 'devtools-panel/logo_horizontal_dark.svg';
+  const goGithubSite = () =>
+    chrome.tabs.create({ url: 'https://github.com/Jonghakseo/chrome-extension-boilerplate-react-vite' });
 
   return (
     <div className={`App ${isLight ? 'bg-slate-50' : 'bg-gray-800'}`}>
       <header className={`App-header ${isLight ? 'text-gray-900' : 'text-gray-100'}`}>
-        <img src={chrome.runtime.getURL(logo)} className="App-logo" alt="logo" />
+        <button onClick={goGithubSite}>
+          <img src={chrome.runtime.getURL(logo)} className="App-logo" alt="logo" />
+        </button>
         <p>
           Edit <code>pages/devtools-panel/src/Panel.tsx</code>
         </p>
@@ -22,7 +26,7 @@ const Panel = () => {
 };
 
 const ToggleButton = (props: ComponentPropsWithoutRef<'button'>) => {
-  const theme = useStorageSuspense(exampleThemeStorage);
+  const theme = useStorage(exampleThemeStorage);
   return (
     <button
       className={

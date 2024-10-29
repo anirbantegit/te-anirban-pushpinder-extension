@@ -2,9 +2,9 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Base",
   "compilerOptions": {
-    "outDir": "dist",
     "allowJs": true,
     "noEmit": true,
+    "module": "esnext",
     "downlevelIteration": true,
     "isolatedModules": true,
     "strict": true,
@@ -18,10 +18,6 @@
     "resolveJsonModule": true,
     "noImplicitReturns": true,
     "jsx": "react-jsx",
-    "lib": [
-      "DOM",
-      "ESNext"
-    ]
+    "lib": ["DOM", "ESNext"]
   }
 }
-
